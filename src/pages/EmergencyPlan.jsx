@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { FileText, Plus, Save, Trash2, Users, MapPin, Phone, Home, AlertCircle, Briefcase, Check, RotateCcw } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { userAPI } from '../utils/api';
 
 const defaultPlan = {
   familyMembers: [],
@@ -66,30 +68,83 @@ const categoryColors = {
 };
 
 export default function EmergencyPlan() {
-    const [plan, setPlan] = useState(() => {
-    const saved = localStorage.getItem('emergency-plan');
-    return saved ? JSON.parse(saved) : defaultPlan;
-  });
+  const { isAuthenticated } = useAuth();
+  const [plan, setPlan] = useState(defaultPlan);
   const [saved, setSaved] = useState(false);
-  const [checklist, setChecklist] = useState(() => {
-    const savedChecklist = localStorage.getItem('gobag-checklist');
-    return savedChecklist ? JSON.parse(savedChecklist) : defaultChecklist;
-  });
+  const [checklist, setChecklist] = useState(defaultChecklist);
   const [activeSection, setActiveSection] = useState('checklist');
+  const [loading, setLoading] = useState(true);
 
-  
+  // Load data from Supabase or localStorage
   useEffect(() => {
-    localStorage.setItem('emergency-plan', JSON.stringify(plan));
-  }, [plan]);
+    const loadData = async () => {
+      if (isAuthenticated) {
+        try {
+          const [emergencyPlan, checklistData] = await Promise.all([
+            userAPI.getEmergencyPlan(),
+            userAPI.getChecklist()
+          ]);
+
+          if (emergencyPlan) {
+            setPlan(emergencyPlan);
+          }
+          if (checklistData) {
+            setChecklist(checklistData);
+          }
+        } catch (error) {
+          console.error('Failed to load data from Supabase:', error);
+          // Fallback to localStorage
+          const saved = localStorage.getItem('emergency-plan');
+          if (saved) setPlan(JSON.parse(saved));
+
+          const savedChecklist = localStorage.getItem('gobag-checklist');
+          if (savedChecklist) setChecklist(JSON.parse(savedChecklist));
+        }
+      } else {
+        // Load from localStorage when not authenticated
+        const saved = localStorage.getItem('emergency-plan');
+        if (saved) setPlan(JSON.parse(saved));
+
+        const savedChecklist = localStorage.getItem('gobag-checklist');
+        if (savedChecklist) setChecklist(JSON.parse(savedChecklist));
+      }
+      setLoading(false);
+    };
+
+    loadData();
+  }, [isAuthenticated]);
+
+  // Save to localStorage as backup
+  useEffect(() => {
+    if (!loading) {
+      localStorage.setItem('emergency-plan', JSON.stringify(plan));
+    }
+  }, [plan, loading]);
 
   useEffect(() => {
-    localStorage.setItem('gobag-checklist', JSON.stringify(checklist));
-  }, [checklist]);
+    if (!loading) {
+      localStorage.setItem('gobag-checklist', JSON.stringify(checklist));
+    }
+  }, [checklist, loading]);
 
-  const handleSave = () => {
-    localStorage.setItem('emergency-plan', JSON.stringify(plan));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    try {
+      if (isAuthenticated) {
+        await Promise.all([
+          userAPI.saveEmergencyPlan(plan),
+          userAPI.saveChecklist(checklist)
+        ]);
+      }
+      // Always save to localStorage as backup
+      localStorage.setItem('emergency-plan', JSON.stringify(plan));
+      localStorage.setItem('gobag-checklist', JSON.stringify(checklist));
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+      alert('Failed to save data. Please try again.');
+    }
   };
 
   const addFamilyMember = () => {
@@ -203,7 +258,9 @@ export default function EmergencyPlan() {
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-yellow-500 font-bold text-lg">Family Emergency Plan</h2>
           </div>
-          <p className="text-white/80 text-sm">Create your family's emergency plan. Your plan is saved on this device.</p>
+          <p className="text-white/80 text-sm">
+            Create your family's emergency plan. Your plan is saved {isAuthenticated ? 'to the cloud and synced across devices' : 'on this device'}.
+          </p>
         </div>
 
         {/* Section Tabs */}

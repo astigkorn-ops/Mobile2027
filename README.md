@@ -5,12 +5,13 @@ A progressive web application built with React and Tailwind CSS focused on disas
 ## Features
 
 - Offline-first PWA with service worker and caching
-- Authentication context (client-side)
+- Supabase authentication with cloud sync
 - Typhoon Dashboard and History pages
 - Interactive Map with geolocation hook
 - Geotag Camera for location-tagged photos
 - Emergency hotline numbers and disaster guidelines
-- Report Incident with offline queueing
+- Report Incident with cloud storage
+- Emergency Plan with cross-device sync
 - Admin setup and dashboard
 - Consistent UI built with a component library (shadcn/ui style)
 - Toast notifications and offline indicator
@@ -21,6 +22,7 @@ A progressive web application built with React and Tailwind CSS focused on disas
 - React Router
 - Tailwind CSS + PostCSS
 - shadcn/ui style components
+- Supabase (Backend as a Service - Database, Auth, API)
 - Service Worker (PWA) in /public/service-worker.js
 - CRACO configuration (craco.config.js) and custom Webpack plugins under /plugins
 
@@ -79,11 +81,28 @@ Check package.json scripts for the authoritative list.
 
 Create a .env file in the project root for runtime config. Common variables:
 
-- REACT_APP_API_BASE_URL
+- REACT_APP_SUPABASE_URL (required for Supabase)
+- REACT_APP_SUPABASE_ANON_KEY (required for Supabase)
 - REACT_APP_MAPBOX_TOKEN (if using map services)
 - REACT_APP_SENTRY_DSN (optional)
 
 Variables must be prefixed with REACT_APP_ to be exposed to the client.
+
+## Supabase Setup
+
+This app has been migrated to use Supabase as the backend. To set up:
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to Settings > API to get your project URL and anon key
+3. Update your `.env` file with:
+   ```
+   REACT_APP_SUPABASE_URL=your_supabase_project_url
+   REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+4. Run the SQL schema from `supabase-schema.sql` in your Supabase SQL Editor
+5. Enable authentication in Supabase Dashboard > Authentication
+
+The app will automatically use Supabase for authentication and data storage when these environment variables are set.
 
 ## PWA and Offline
 

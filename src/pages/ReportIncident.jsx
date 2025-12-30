@@ -192,26 +192,29 @@ export default function ReportIncident() {
 
     const reportData = {
       id: crypto.randomUUID(),
-      incidentType: formData.incidentType,
+      incident_type: formData.incidentType,
       date: formData.date,
       time: formData.time,
       description: formData.description,
-      reporter_phone: formData.reporterPhone || undefined,
+      reporter_phone: formData.reporterPhone || null,
       reporter_name: formData.reporterName,
-      location: {
-        latitude: position[0],
-        longitude: position[1],
-      },
+      latitude: position[0],
+      longitude: position[1],
       images: uploadedImages,
-      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const { supabase } = await import('../utils/supabase');
+
+      const { data, error } = await supabase
+        .from('incidents')
+        .insert([reportData]);
+
+      if (error) throw error;
+
       setSubmitted(true);
-      
+
       setTimeout(() => {
         setSubmitted(false);
         resetForm();
