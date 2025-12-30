@@ -79,7 +79,7 @@ const adminModule = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <div className="relative min-h-screen bg-white">
@@ -158,6 +158,15 @@ export default function Dashboard() {
           </div>
        </main>
       </div>
+
+       {/* ADD LOGIN/LOGOUT */}
+          <div className="mb-16 text-center animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-950/20 to-blue-800/20 rounded-full border border-blue-950/20 backdrop-blur-sm mb-2">
+
+              <span className="text-blue-950 text-sm font-medium">Login</span>
+            </div>
+
+          </div>
 
       <style jsx>{`
         @keyframes fade-in {

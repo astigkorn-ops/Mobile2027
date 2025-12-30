@@ -1,19 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { LogIn, Mail, Lock, User, Phone, AlertCircle, Loader2 } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function Login() {
-  const navigate = useNavigate();
-  const { login, register } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    full_name: '',
-    phone: ''
+    password: ''
   });
 
   const handleSubmit = async (e) => {
@@ -21,29 +14,12 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    try {
-      let result;
-      if (isLogin) {
-        result = await login(formData.email, formData.password);
-      } else {
-        result = await register(
-          formData.email,
-          formData.password,
-          formData.full_name,
-          formData.phone
-        );
-      }
-
-      if (result.success) {
-        navigate('/dashboard');
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
+    // Simulate login process
+    setTimeout(() => {
       setLoading(false);
-    }
+      // Mock successful login
+      console.log('Login attempt with:', formData);
+    }, 1500);
   };
 
   const handleChange = (e) => {
@@ -54,188 +30,179 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-blue-950 flex items-center justify-center px-4" data-testid="auth-page">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Animated background pattern */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-950/5 via-transparent to-yellow-500/5"></div>
+        
+        {/* Floating animated elements */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/3 right-1/4 w-72 h-72 bg-blue-950/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      </div>
+
+      <div className="w-full max-w-sm mx-auto relative z-10">
         {/* Logo and Title */}
-        <div className="text-center mb-8">
-          <img 
-            src="/logome.webp" 
-            alt="MDRRMO Logo" 
-            className="w-20 h-20 mx-auto mb-4"
-            data-testid="auth-logo"
-          />
-          <h1 className="text-yellow-500 font-bold text-2xl mb-2">
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-950 to-blue-800 flex items-center justify-center">
+            <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
+              <LogIn className="w-6 h-6 text-blue-950" />
+            </div>
+          </div>
+          <h1 className="text-blue-950 font-bold text-xl mb-2 tracking-tight">
             MDRRMO PIO DURAN
           </h1>
-          <p className="text-white/80 text-sm">
+          <p className="text-blue-950/80 text-sm font-medium">
             Emergency Preparedness App
           </p>
         </div>
 
         {/* Auth Form */}
-        <div className="bg-white rounded-2xl p-6 shadow-xl">
-          <div className="flex mb-6 bg-slate-100 rounded-xl p-1">
-            <button
-              onClick={() => {
-                setIsLogin(true);
-                setError('');
-              }}
-              className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
-                isLogin
-                  ? 'bg-yellow-500 text-blue-950'
-                  : 'text-slate-600'
-              }`}
-              data-testid="login-tab"
-            >
-              Login
-            </button>
-            <button
-              onClick={() => {
-                setIsLogin(false);
-                setError('');
-              }}
-              className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
-                !isLogin
-                  ? 'bg-yellow-500 text-blue-950'
-                  : 'text-slate-600'
-              }`}
-              data-testid="register-tab"
-            >
-              Register
-            </button>
-          </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-700 text-sm" data-testid="auth-error">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error}
+        <div className="bg-white rounded-2xl p-6 shadow-xl border border-blue-950/10 relative overflow-hidden">
+          {/* Animated border effect */}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-950 via-yellow-500 to-blue-950 opacity-20 blur-sm"></div>
+          
+          <div className="relative z-10">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-blue-950 mb-2">Welcome Back</h2>
+              <p className="text-blue-950/70 text-sm">Sign in to your account</p>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <>
-                <div>
-                  <label className="block text-slate-700 text-sm font-medium mb-2">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="text"
-                      name="full_name"
-                      value={formData.full_name}
-                      onChange={handleChange}
-                      placeholder="Enter your full name"
-                      required={!isLogin}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-yellow-500 focus:outline-none"
-                      data-testid="full-name-input"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 text-sm font-medium mb-2">
-                    Phone (Optional)
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      placeholder="+63 XXX XXX XXXX"
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-yellow-500 focus:outline-none"
-                      data-testid="phone-input"
-                    />
-                  </div>
-                </div>
-              </>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-700 text-sm animate-slide-down">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
             )}
 
-            <div>
-              <label className="block text-slate-700 text-sm font-medium mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="your.email@example.com"
-                  required
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-yellow-500 focus:outline-none"
-                  data-testid="email-input"
-                />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="animate-fade-in-up delay-100">
+                <label className="block text-blue-950 text-sm font-medium mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-950/60" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="your.email@example.com"
+                    required
+                    className="w-full pl-11 pr-4 py-3 bg-blue-50/50 border-2 border-blue-950/20 rounded-xl focus:border-yellow-500 focus:outline-none transition-all duration-300 text-blue-950 placeholder-blue-950/50"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-slate-700 text-sm font-medium mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-yellow-500 focus:outline-none"
-                  data-testid="password-input"
-                />
+              <div className="animate-fade-in-up delay-200">
+                <label className="block text-blue-950 text-sm font-medium mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-950/60" />
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                    className="w-full pl-11 pr-4 py-3 bg-blue-50/50 border-2 border-blue-950/20 rounded-xl focus:border-yellow-500 focus:outline-none transition-all duration-300 text-blue-950 placeholder-blue-950/50"
+                  />
+                </div>
               </div>
-              {!isLogin && (
-                <p className="text-xs text-slate-500 mt-1">
-                  Minimum 6 characters
-                </p>
-              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-950 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group animate-fade-in-up delay-300"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+                    Login
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-4 text-center animate-fade-in-up delay-400">
+              <button
+                onClick={() => console.log('Skip to dashboard')}
+                className="text-blue-950 text-sm hover:text-yellow-500 hover:underline transition-colors font-medium"
+              >
+                Skip for now →
+              </button>
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              data-testid="submit-btn"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  {isLogin ? 'Logging in...' : 'Creating account...'}
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  {isLogin ? 'Login' : 'Create Account'}
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-slate-600 text-sm hover:text-blue-950 transition-colors"
-              data-testid="skip-auth-btn"
-            >
-              Skip for now →
-            </button>
           </div>
         </div>
 
         {/* Info */}
-        <div className="mt-6 text-center">
-          <p className="text-white/60 text-xs">
-            {isLogin ? 'Create an account' : 'Already have an account?'} to sync your emergency plan and checklist across devices.
+        <div className="mt-4 text-center animate-fade-in delay-500">
+          <p className="text-blue-950/60 text-xs">
+            Securely access your emergency plans and stay prepared
           </p>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slide-down {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.6s ease-out forwards;
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out forwards;
+        }
+        
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out forwards;
+        }
+        
+        .delay-100 {
+          animation-delay: 0.1s;
+        }
+        
+        .delay-200 {
+          animation-delay: 0.2s;
+        }
+        
+        .delay-300 {
+          animation-delay: 0.3s;
+        }
+        
+        .delay-400 {
+          animation-delay: 0.4s;
+        }
+        
+        .delay-500 {
+          animation-delay: 0.5s;
+        }
+        
+        .delay-1000 {
+          animation-delay: 1s;
+        }
+      `}</style>
     </div>
   );
 }

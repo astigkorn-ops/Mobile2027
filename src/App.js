@@ -16,8 +16,6 @@ import DisasterGuidelines from './pages/DisasterGuidelines';
 import SupportResources from './pages/SupportResources';
 import EmergencyPlan from './pages/EmergencyPlan';
 import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminSetup from './pages/AdminSetup';
 import BottomNavBar from './components/BottomNavBar';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
@@ -42,8 +40,6 @@ function AppContent() {
         <Route path="/disaster-guidelines" element={<DisasterGuidelines />} />
         <Route path="/support-resources" element={<SupportResources />} />
         <Route path="/emergency-plan" element={<EmergencyPlan />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/setup" element={<AdminSetup />} />
       </Routes>
       
       {showBottomNav && <BottomNavBar />}
