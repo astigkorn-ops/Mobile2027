@@ -68,7 +68,7 @@ export const Header = ({
 
 export const TopNav = ({ subtitle }) => {
   return (
-    <header className="relative overflow-hidden px-4 py-4 border-b-2 border-white/20" data-testid="top-nav">
+    <header className="bg-blue-950 px-4 py-3 sticky top-0 z-50 border-b-2 border-white">
       {/* Animated gradient background */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900"></div>
       

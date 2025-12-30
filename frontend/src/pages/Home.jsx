@@ -118,7 +118,7 @@ export default function Home() {
 
   return (
     <div 
-      className="min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden"
+      className="min-h-screen bg-cover bg-center mb-16 bg-no-repeat relative"
       style={{ backgroundImage: `url(/${backgroundImage})` }}
       data-testid="home-page"
     >
@@ -232,11 +232,11 @@ export default function Home() {
         </div>
 
         {/* Main Content - Optimized spacing and typography */}
-        <main className="flex flex-col justify-center items-center px-6 text-center pt-8 pb-8 flex-1">
+        <main className="flex flex-col justify-center items-center px-6 text-center pt-4 pb-4 flex-1">
           {/* Main Slogan - Enhanced typography and spacing */}
           <div className="mb-6 animate-fade-in">
             <h2 
-              className="text-3xl md:text-4xl font-bold leading-tight mb-3 max-w-md"
+              className="text-3xl md:text-4xl font-bold leading-tight mb-2 max-w-md"
               data-testid="main-slogan"
             >
               <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
@@ -249,7 +249,7 @@ export default function Home() {
             </h2>
 
             {/* Subtitle - Better spacing and readability */}
-            <p className="text-slate-200 text-base md:text-lg mb-8 max-w-lg font-medium leading-relaxed opacity-90">
+            <p className="text-slate-200 text-base md:text-lg mb-2 max-w-lg font-medium leading-relaxed">
               Enhancing disaster preparedness, strengthening community resilience and ensuring safety for all
             </p>
           </div>

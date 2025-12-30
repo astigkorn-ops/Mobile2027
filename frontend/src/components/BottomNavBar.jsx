@@ -15,7 +15,7 @@ export default function BottomNavBar() {
 
   return (
     <nav
-      className="relative overflow-hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] border-t-2 border-white/20 z-50"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-blue-950 border-t-2 border-white z-50"
       data-testid="bottom-nav-bar"
     >
       {/* Animated gradient background */}
