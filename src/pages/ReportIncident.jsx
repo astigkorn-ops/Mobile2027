@@ -210,7 +210,6 @@ export default function ReportIncident() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      console.log('Incident report submitted:', reportData);
       setSubmitted(true);
       
       setTimeout(() => {

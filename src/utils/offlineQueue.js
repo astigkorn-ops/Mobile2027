@@ -22,7 +22,6 @@ class OfflineQueueManager {
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('[OfflineQueue] Database opened successfully');
         resolve(this.db);
       };
 
@@ -40,8 +39,7 @@ class OfflineQueueManager {
           objectStore.createIndex('timestamp', 'timestamp', { unique: false });
           objectStore.createIndex('synced', 'synced', { unique: false });
           
-          console.log('[OfflineQueue] Object store created');
-        }
+          }
       };
     });
   }
@@ -63,14 +61,12 @@ class OfflineQueueManager {
       const request = objectStore.add(incident);
 
       request.onsuccess = () => {
-        console.log('[OfflineQueue] Incident added to queue:', request.result);
         this.notifyListeners();
         
         // Register background sync if available
         if ('serviceWorker' in navigator && 'SyncManager' in window) {
           navigator.serviceWorker.ready.then(registration => {
             registration.sync.register('sync-incidents')
-              .then(() => console.log('[OfflineQueue] Background sync registered'))
               .catch(err => console.error('[OfflineQueue] Failed to register background sync:', err));
           });
         }
@@ -127,7 +123,6 @@ class OfflineQueueManager {
           const updateRequest = objectStore.put(incident);
           
           updateRequest.onsuccess = () => {
-            console.log('[OfflineQueue] Incident marked as synced:', id);
             this.notifyListeners();
             resolve();
           };
@@ -158,7 +153,6 @@ class OfflineQueueManager {
           objectStore.delete(cursor.primaryKey);
           cursor.continue();
         } else {
-          console.log('[OfflineQueue] Synced incidents deleted');
           this.notifyListeners();
           resolve();
         }
@@ -171,8 +165,7 @@ class OfflineQueueManager {
   // Sync all queued incidents
   async syncAll() {
     const incidents = await this.getQueuedIncidents();
-    console.log('[OfflineQueue] Syncing', incidents.length, 'incidents');
-
+    
     const results = {
       success: 0,
       failed: 0,
@@ -244,7 +237,6 @@ class OfflineQueueManager {
       const request = objectStore.clear();
 
       request.onsuccess = () => {
-        console.log('[OfflineQueue] All data cleared');
         this.notifyListeners();
         resolve();
       };

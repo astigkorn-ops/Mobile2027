@@ -14,28 +14,21 @@ class CacheManager {
 
   // Pre-cache critical API endpoints
   async preCacheCriticalData() {
-    console.log('[CacheManager] Pre-caching critical data...');
-    
     const promises = CRITICAL_ENDPOINTS.map(async (endpoint) => {
       try {
         const response = await fetch(`${this.baseURL}${endpoint}`);
         if (response.ok) {
-          console.log('[CacheManager] Cached:', endpoint);
           return { endpoint, success: true };
         } else {
-          console.warn('[CacheManager] Failed to cache:', endpoint, response.status);
           return { endpoint, success: false };
         }
       } catch (error) {
-        console.error('[CacheManager] Error caching:', endpoint, error);
         return { endpoint, success: false, error };
       }
     });
 
     const results = await Promise.allSettled(promises);
     const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-    
-    console.log(`[CacheManager] Pre-cached ${successCount}/${CRITICAL_ENDPOINTS.length} endpoints`);
     
     return results;
   }
@@ -49,7 +42,6 @@ class CacheManager {
       );
       
       await Promise.all(oldCaches.map(cacheName => caches.delete(cacheName)));
-      console.log(`[CacheManager] Cleared ${oldCaches.length} old caches`);
     }
   }
 
@@ -76,7 +68,6 @@ class CacheManager {
 
   // Manually trigger cache refresh
   async refreshCache() {
-    console.log('[CacheManager] Refreshing cache...');
     await this.clearOldCache();
     return await this.preCacheCriticalData();
   }

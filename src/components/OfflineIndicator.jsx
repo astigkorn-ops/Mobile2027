@@ -14,7 +14,6 @@ export function OfflineIndicator() {
     setSyncing(true);
     try {
       const results = await offlineQueue.syncAll();
-      console.log('[OfflineIndicator] Sync results:', results);
       
       // Show success message
       if (results.success > 0) {
@@ -67,7 +66,6 @@ export function OfflineIndicator() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data.type === 'SYNC_COMPLETE') {
-          console.log('[OfflineIndicator] Sync complete:', event.data);
           setSyncing(false);
           // Refresh queue count
           offlineQueue.getQueueCount().then(count => {

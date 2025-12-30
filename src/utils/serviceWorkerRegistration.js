@@ -24,9 +24,7 @@ export function register(config) {
 
         // Add some additional logging for localhost.
         navigator.serviceWorker.ready.then(() => {
-          console.log(
-            'This web app is being served cache-first by a service worker.'
-          );
+          // cache-first service worker ready on localhost
         });
       } else {
         // Is not localhost. Just register service worker
@@ -40,8 +38,6 @@ function registerValidSW(swUrl, config) {
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
-      console.log('[SW] Service worker registered:', registration);
-      
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
         if (installingWorker == null) {
@@ -51,15 +47,11 @@ function registerValidSW(swUrl, config) {
           if (installingWorker.state === 'installed') {
             if (navigator.serviceWorker.controller) {
               // New service worker available
-              console.log('[SW] New content is available; please refresh.');
-              
               if (config && config.onUpdate) {
                 config.onUpdate(registration);
               }
             } else {
               // Content is cached for offline use
-              console.log('[SW] Content is cached for offline use.');
-              
               if (config && config.onSuccess) {
                 config.onSuccess(registration);
               }
@@ -96,7 +88,7 @@ function checkValidServiceWorker(swUrl, config) {
       }
     })
     .catch(() => {
-      console.log('[SW] No internet connection found. App is running in offline mode.');
+      // offline mode
     });
 }
 
