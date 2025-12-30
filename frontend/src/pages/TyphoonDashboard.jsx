@@ -60,7 +60,7 @@ export default function TyphoonDashboard() {
       </div>
 
       <div className="relative z-10">
-        <Header title="TYPHOON DASHBOARD" icon={Cloud} />
+        <Header title="TYPHOON DASHBOARD" showBack icon={Cloud} />
         
         <main className="px-4 py-6 max-w-2xl mx-auto space-y-6">
           {/* Monitoring Alert */}

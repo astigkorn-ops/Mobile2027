@@ -1,10 +1,13 @@
-import { User as UserIcon } from 'lucide-react';
+import { User as UserIcon, ChevronLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const Header = ({
   title,
   subtitle,
   icon: Icon,
+  showBack = false,
 }) => {
+  const navigate = useNavigate();
   return (
     <header
       className="relative overflow-hidden px-4 py-3 sticky top-0 z-50 border-b-2 border-white/20"
@@ -28,6 +31,18 @@ export const Header = ({
 
       <div className="relative flex items-center justify-between max-w-4xl mx-auto">
         <div className="flex items-center gap-3 min-w-0">
+          {showBack && (
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"
+              data-testid="back-button"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+
           <img
             src="/logome.webp"
             alt="MDRRMO"
@@ -54,12 +69,7 @@ export const Header = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-yellow-500/20 to-yellow-400/20 px-3 py-1.5 rounded-full border border-yellow-500/30 backdrop-blur-sm">
-            <UserIcon className="w-4 h-4 text-yellow-400" />
-            <span className="text-yellow-400 text-xs font-medium truncate max-w-[100px] animate-pulse">
-              Guest User
-            </span>
-          </div>
+          {/* Removed guest user section */}
         </div>
       </div>
     </header>
@@ -104,12 +114,7 @@ export const TopNav = ({ subtitle }) => {
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-yellow-500/20 to-yellow-400/20 px-3 py-2 rounded-full border border-yellow-500/30 backdrop-blur-sm">
-            <UserIcon className="w-5 h-5 text-yellow-400" />
-            <span className="text-yellow-400 text-sm font-medium animate-pulse">
-              Guest User
-            </span>
-          </div>
+          {/* Removed guest user section */}
         </div>
       </div>
     </header>

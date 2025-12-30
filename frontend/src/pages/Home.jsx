@@ -232,9 +232,9 @@ export default function Home() {
         </div>
 
         {/* Main Content - Optimized spacing and typography */}
-        <main className="flex flex-col justify-center items-center px-6 text-center pt-4 pb-4 flex-1">
+        <main className="flex flex-col justify-center items-center px-6 text-center flex-1">
           {/* Main Slogan - Enhanced typography and spacing */}
-          <div className="mb-6 animate-fade-in">
+          <div className="animate-fade-in">
             <h2 
               className="text-3xl md:text-4xl font-bold leading-tight mb-2 max-w-md"
               data-testid="main-slogan"

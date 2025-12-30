@@ -13,7 +13,6 @@ import {
   Wind,
   Users,
   Heart,
-  Navigation,
   CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -122,9 +121,6 @@ export default function Dashboard() {
               <Phone className="w-8 h-8 text-white" />
             </div>
             <div className="flex items-center gap-3">
-              <div className="bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
-                24/7
-              </div>
               <div className="text-left">
                 <h2 className="font-bold text-2xl tracking-wide text-blue-950" data-testid="hotline-title">
                   HOTLINE NUMBERS
@@ -156,9 +152,6 @@ export default function Dashboard() {
                   <p className="text-blue-950/70 text-sm text-center">
                     {module.description}
                   </p>
-                  <div className="mt-3">
-                    <Navigation className="w-4 h-4 text-blue-950/50 group-hover:text-blue-950 transition-colors" />
-                  </div>
                 </button>
               );
             })}
