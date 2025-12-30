@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import { useGeolocated } from 'react-geolocated';
 import { useDropzone } from 'react-dropzone';
@@ -8,6 +9,7 @@ import {
   Camera, Download, RotateCcw, Settings, MapPin, Zap, ZapOff,
   Grid3X3, ZoomIn, ZoomOut, FlipHorizontal, Upload, X, Image as ImageIcon,
   Type, Sliders, Eye, EyeOff, Trash2, Save, RefreshCw
+  , ArrowLeft
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Slider } from '../components/ui/slider';
@@ -23,6 +25,7 @@ import { cn } from '../lib/utils';
 import { Header } from '../components/Header';
 
 export default function GeotagCamera() {
+  const navigate = useNavigate();
   // Camera state
   const [facingMode, setFacingMode] = useState('environment');
   const [showGrid, setShowGrid] = useState(false);
@@ -244,6 +247,14 @@ export default function GeotagCamera() {
       {/* Header */}
       <div className="bg-slate-900/90 backdrop-blur-md border-b border-blue-500/30 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="text-blue-400"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           <Camera className="w-6 h-6 text-blue-400" />
           <h1 className="text-xl font-bold text-white">Geotag Camera HD</h1>
         </div>
