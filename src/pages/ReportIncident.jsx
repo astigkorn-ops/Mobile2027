@@ -52,6 +52,7 @@ export default function ReportIncident() {
   const [submitting, setSubmitting] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Compress and resize image
   const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.8) => {
@@ -221,7 +222,8 @@ export default function ReportIncident() {
       }, 3000);
     } catch (error) {
       console.error('Failed to submit incident report:', error);
-      alert('Failed to submit incident report. Please try again.');
+      setErrorMessage('Failed to submit incident report. Please try again.');
+      setTimeout(() => setErrorMessage(''), 4000);
     } finally {
       setSubmitting(false);
     }
@@ -260,6 +262,19 @@ export default function ReportIncident() {
         <Header title="REPORT AN INCIDENT" showBack icon={AlertTriangle} />
         
         <main className="px-6 py-8 max-w-2xl mx-auto">
+          {errorMessage && (
+            <div className="mb-6 bg-gradient-to-r from-red-600 to-orange-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg animate-fadeIn" data-testid="error-message">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
+              <div>
+                <p className="font-semibold text-lg">
+                  {errorMessage}
+                </p>
+                <p className="text-sm opacity-90">
+                  Please try again shortly.
+                </p>
+              </div>
+            </div>
+          )}
           {submitted && (
             <div className={`mb-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg animate-fadeIn`} data-testid="success-message">
               <CheckCircle className="w-6 h-6 animate-pulse" />

@@ -19,6 +19,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 
 import { OfflineIndicator } from './components/OfflineIndicator';
+import BottomNavBar from './components/BottomNavBar';
 
 function AppContent() {
   const location = useLocation();

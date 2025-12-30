@@ -105,21 +105,7 @@ export default function TyphoonDashboard() {
           <div className="bg-white border-2 border-blue-950/20 rounded-xl overflow-hidden shadow-lg" data-testid="typhoon-tracking">
             <div className="p-4 bg-gradient-to-r from-yellow-500 to-yellow-400 border-b border-yellow-200">
               <h3 className="text-blue-950 font-bold text-lg">Typhoon Tracking</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <MapPin className="w-4 h-4 text-blue-950" />
-                <span className="text-blue-950/80 text-xs">
-                  As of: {new Date().toLocaleTimeString('en-PH', { 
-                    timeZone: 'Asia/Manila',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}, {new Date().toLocaleDateString('en-PH', { 
-                    timeZone: 'Asia/Manila',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })} • Coordinates: {typhoonData.position}
-                </span>
-              </div>
+             
             </div>
             
             <div className="divide-y divide-blue-950/10">

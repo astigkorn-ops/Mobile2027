@@ -1,7 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogIn, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -14,12 +18,20 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    // Simulate login process
-    setTimeout(() => {
+    try {
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Login failed');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      console.error('Login error:', err);
+    } finally {
       setLoading(false);
-      // Mock successful login
-      console.log('Login attempt with:', formData);
-    }, 1500);
+    }
   };
 
   const handleChange = (e) => {
@@ -121,7 +133,7 @@ export default function Login() {
 
             <div className="mt-4 text-center">
               <button
-                onClick={() => console.log('Skip to dashboard')}
+                onClick={() => navigate('/dashboard')}
                 className="text-blue-950 text-sm hover:text-yellow-500 hover:underline transition-colors font-medium"
               >
                 Skip for now →

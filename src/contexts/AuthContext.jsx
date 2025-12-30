@@ -7,11 +7,23 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Extract user data with admin status from auth metadata
+  const enrichUserData = (authUser) => {
+    if (!authUser) return null;
+
+    return {
+      ...authUser,
+      is_admin: authUser.user_metadata?.is_admin ?? false,
+      full_name: authUser.user_metadata?.full_name ?? ''
+    };
+  };
+
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      const enrichedUser = session?.user ? enrichUserData(session.user) : null;
+      setUser(enrichedUser);
       setLoading(false);
     };
 
@@ -20,7 +32,8 @@ export const AuthProvider = ({ children }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null);
+        const enrichedUser = session?.user ? enrichUserData(session.user) : null;
+        setUser(enrichedUser);
         setLoading(false);
       }
     );
