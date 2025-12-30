@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/App.css';
 import { Toaster } from 'sonner';
 import toast, { Toaster as HotToaster } from 'react-hot-toast';
@@ -16,7 +16,8 @@ import DisasterGuidelines from './pages/DisasterGuidelines';
 import SupportResources from './pages/SupportResources';
 import EmergencyPlan from './pages/EmergencyPlan';
 import Login from './pages/Login';
-import BottomNavBar from './components/BottomNavBar';
+import AdminDashboard from './pages/AdminDashboard';
+
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 function AppContent() {
@@ -31,6 +32,7 @@ function AppContent() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/geotag-camera" element={<GeotagCamera />} />
         <Route path="/hotlines" element={<HotlineNumbers />} />
         <Route path="/report-incident" element={<ReportIncident />} />

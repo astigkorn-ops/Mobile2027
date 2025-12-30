@@ -1,23 +1,7 @@
 import piexif from 'piexifjs';
 
-interface GeoCoordinates {
-  latitude: number;
-  longitude: number;
-  altitude?: number;
-  accuracy?: number;
-}
-
-interface ExifData {
-  coordinates?: GeoCoordinates;
-  timestamp?: Date;
-  deviceMake?: string;
-  deviceModel?: string;
-  software?: string;
-  imageDescription?: string;
-}
-
 // Convert decimal degrees to DMS format
-function toDegreesMinutesSeconds(coordinate: number): [[number, number], [number, number], [number, number]] {
+function toDegreesMinutesSeconds(coordinate) {
   const degrees = Math.floor(Math.abs(coordinate));
   const minutes = Math.floor((Math.abs(coordinate) - degrees) * 60);
   const seconds = ((Math.abs(coordinate) - degrees) * 60 - minutes) * 60;
@@ -30,7 +14,7 @@ function toDegreesMinutesSeconds(coordinate: number): [[number, number], [number
 }
 
 // Convert latitude to EXIF format
-function latitudeToExif(latitude: number): { value: [[number, number], [number, number], [number, number]]; ref: string } {
+function latitudeToExif(latitude) {
   return {
     value: toDegreesMinutesSeconds(latitude),
     ref: latitude >= 0 ? 'N' : 'S'
@@ -38,7 +22,7 @@ function latitudeToExif(latitude: number): { value: [[number, number], [number, 
 }
 
 // Convert longitude to EXIF format
-function longitudeToExif(longitude: number): { value: [[number, number], [number, number], [number, number]]; ref: string } {
+function longitudeToExif(longitude) {
   return {
     value: toDegreesMinutesSeconds(longitude),
     ref: longitude >= 0 ? 'E' : 'W'
@@ -46,12 +30,12 @@ function longitudeToExif(longitude: number): { value: [[number, number], [number
 }
 
 // Format date as EXIF timestamp
-function formatExifDate(date: Date): string {
+function formatExifDate(date) {
   return date.toISOString().replace(/T/, ' ').replace(/\..+/, '');
 }
 
 // Embed EXIF data into JPEG image
-export function embedExifData(imageDataUrl: string, exifData: ExifData): string {
+export function embedExifData(imageDataUrl, exifData) {
   try {
     // Load existing EXIF data
     const exifObj = piexif.load(imageDataUrl);
@@ -120,11 +104,11 @@ export function embedExifData(imageDataUrl: string, exifData: ExifData): string 
 }
 
 // Read EXIF data from image
-export function readExifData(imageDataUrl: string): ExifData | null {
+export function readExifData(imageDataUrl) {
   try {
     const exifObj = piexif.load(imageDataUrl);
 
-    const exifData: ExifData = {};
+    const exifData = {};
 
     // GPS data
     if (exifObj.GPS && exifObj.GPS[piexif.GPSIFD.GPSLatitude]) {
@@ -171,7 +155,7 @@ export function readExifData(imageDataUrl: string): ExifData | null {
 }
 
 // Remove EXIF data from image
-export function removeExifData(imageDataUrl: string): string {
+export function removeExifData(imageDataUrl) {
   try {
     return piexif.remove(imageDataUrl);
   } catch (error) {

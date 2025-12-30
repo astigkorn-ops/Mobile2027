@@ -160,13 +160,31 @@ export default function Dashboard() {
       </div>
 
        {/* ADD LOGIN/LOGOUT */}
-          <div className="mb-16 text-center animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-950/20 to-blue-800/20 rounded-full border border-blue-950/20 backdrop-blur-sm mb-2">
+       <div className="relative mb-16 bottom-4 left-0 right-0 flex justify-center z-20">
+         <button
+           onClick={() => {
+             if (user) {
+               logout();
+             } else {
+               navigate('/login');
+             }
+           }}
+           className={`px-6 py-3 rounded-full shadow-xl border-2 transition-all bg-white hover:bg-blue-50 text-blue-950 border-blue-950/20 font-bold flex items-center gap-2`}
+         >
+           {user ? (
+             <>
+               <CheckCircle className="w-5 h-5 text-green-600" />
+               Logout
+             </>
+           ) : (
+             <>
+               <Users className="w-5 h-5 text-blue-600" />
+               Login
+             </>
+           )}
+         </button>
+       </div>
 
-              <span className="text-blue-950 text-sm font-medium">Login</span>
-            </div>
-
-          </div>
 
       <style jsx>{`
         @keyframes fade-in {
