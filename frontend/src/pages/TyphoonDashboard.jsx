@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { Cloud, AlertTriangle, Wind, Navigation, Gauge, RefreshCw, MapPin, History } from 'lucide-react';
+import { AlertTriangle, Cloud, Gauge, History, MapPin, Navigation, RefreshCw, Wind } from 'lucide-react';
 
 const mockTyphoonData = {
   name: 'Typhoon CARINA',
@@ -126,12 +126,14 @@ export default function TyphoonDashboard() {
               <InfoRow 
                 label="Typhoon Name" 
                 value={`${typhoonData.name} (${typhoonData.localName})`}
-                highlight
+                highlight={true}
               />
-              <InfoRow label="Current Position" value={typhoonData.position} />
+              <InfoRow label="As of" value="03:00 AM, Dec 31, 2025" />
+              <InfoRow label="Coordinates" value={typhoonData.position} />
+              <InfoRow label="Current Location" value="East of Luzon" />
               <InfoRow label="Max Wind Speed" value={typhoonData.maxWindSpeed} icon={Wind} />
               <InfoRow label="Movement" value={typhoonData.movement} icon={Navigation} />
-              <InfoRow label="Intensity" value={typhoonData.intensity} icon={Gauge} highlight />
+              <InfoRow label="Intensity" value={typhoonData.intensity} icon={Gauge} highlight={true} />
               <InfoRow label="Central Pressure" value={typhoonData.pressure} />
             </div>
           </div>
