@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
-import { Briefcase, Check, Plus, Trash2, Save, RotateCcw, Cloud, CloudOff, AlertCircle } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { userAPI } from '../utils/api';
+import { Briefcase, Check, Trash2, RotateCcw } from 'lucide-react';
 
 const defaultChecklist = [
   { id: 1, category: 'Documents', item: 'Valid IDs (Photocopy)', checked: false },
@@ -47,60 +45,15 @@ const categoryColors = {
 };
 
 export default function GoBagChecklist() {
-  const { isAuthenticated, user } = useAuth();
   const [checklist, setChecklist] = useState(() => {
     const saved = localStorage.getItem('gobag-checklist');
     return saved ? JSON.parse(saved) : defaultChecklist;
   });
-  const [newItem, setNewItem] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Documents');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('local'); // 'local', 'synced', 'error'
-
-  // Load checklist from backend if user is authenticated
-  useEffect(() => {
-    const loadChecklistFromBackend = async () => {
-      if (isAuthenticated) {
-        try {
-          const response = await userAPI.getChecklist();
-          if (response.data.checklist && response.data.checklist.checklist_data) {
-            setChecklist(response.data.checklist.checklist_data);
-            localStorage.setItem('gobag-checklist', JSON.stringify(response.data.checklist.checklist_data));
-            setSyncStatus('synced');
-          }
-        } catch (error) {
-          console.error('Failed to load checklist from backend:', error);
-          setSyncStatus('error');
-        }
-      }
-    };
-
-    loadChecklistFromBackend();
-  }, [isAuthenticated]);
+  const [syncStatus, setSyncStatus] = useState('local');
 
   useEffect(() => {
     localStorage.setItem('gobag-checklist', JSON.stringify(checklist));
-    
-    // Auto-sync to backend if user is authenticated (debounced)
-    if (isAuthenticated) {
-      setSyncStatus('local');
-      const syncTimer = setTimeout(async () => {
-        try {
-          setSyncing(true);
-          await userAPI.saveChecklist(checklist);
-          setSyncStatus('synced');
-        } catch (error) {
-          console.error('Failed to sync checklist:', error);
-          setSyncStatus('error');
-        } finally {
-          setSyncing(false);
-        }
-      }, 1000); // Debounce 1 second
-
-      return () => clearTimeout(syncTimer);
-    }
-  }, [checklist, isAuthenticated]);
+  }, [checklist]);
 
   const toggleItem = (id) => {
     setChecklist(prev =>
@@ -108,17 +61,6 @@ export default function GoBagChecklist() {
         item.id === id ? { ...item, checked: !item.checked } : item
       )
     );
-  };
-
-  const addItem = () => {
-    if (!newItem.trim()) return;
-    const newId = Math.max(...checklist.map(i => i.id), 0) + 1;
-    setChecklist(prev => [
-      ...prev,
-      { id: newId, category: selectedCategory, item: newItem.trim(), checked: false }
-    ]);
-    setNewItem('');
-    setShowAddForm(false);
   };
 
   const deleteItem = (id) => {
@@ -146,110 +88,78 @@ export default function GoBagChecklist() {
   })).filter(group => group.items.length > 0);
 
   return (
-    <div className="min-h-screen bg-slate-100" data-testid="gobag-checklist-page">
-      <Header title="GO BAG CHECKLIST" showBack icon={Briefcase} />
-      
-      <main className="px-4 py-6 max-w-2xl mx-auto space-y-6">
+    <div 
+      className="min-h-screen bg-white relative overflow-hidden"
+      style={{
+        backgroundImage: `
+          radial-gradient(circle at 10% 20%, rgba(234, 88, 12, 0.05) 0%, transparent 20%),
+          radial-gradient(circle at 90% 80%, rgba(234, 88, 12, 0.05) 0%, transparent 20%),
+          linear-gradient(45deg, transparent 49%, rgba(234, 88, 12, 0.03) 50%, transparent 51%),
+          linear-gradient(-45deg, transparent 49%, rgba(234, 88, 12, 0.03) 50%, transparent 51%)
+        `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}
+    >
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-yellow-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob"></div>
+        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-blue-950 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-60 h-60 bg-yellow-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000"></div>
+      </div>
+
+<div className="fixed mx-auto max-w-md w-full top-0 left-0 right-0 z-50">
+
+    <Header title="GO BAG CHECKLIST" showBack icon={Briefcase} />
+
+</div>
+
+      <main className="px-4 py-6 pt-16 max-w-2xl mx-auto space-y-6 relative z-10">
+        
+        
         {/* Progress Card */}
-        <div className="bg-white rounded-xl p-4" data-testid="progress-card">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-blue-950 font-bold">Preparation Progress</h3>
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200" data-testid="progress-card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-blue-950 font-bold text-lg">Preparation Progress</h3>
             <div className="flex items-center gap-2">
-              <span className="text-blue-950 font-bold text-lg">{progress}%</span>
-              {isAuthenticated && (
-                <div className="flex items-center gap-1">
-                  {syncing && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" title="Syncing..."></div>
-                  )}
-                  {!syncing && syncStatus === 'synced' && (
-                    <Cloud className="w-4 h-4 text-green-500" title="Synced" />
-                  )}
-                  {!syncing && syncStatus === 'error' && (
-                    <AlertCircle className="w-4 h-4 text-red-500" title="Sync error" />
-                  )}
-                </div>
-              )}
+              <span className="text-blue-950 font-bold text-xl">{progress}%</span>
             </div>
           </div>
-          <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+          <div className="w-full h-4 bg-slate-200 rounded-full overflow-hidden mb-3">
             <div 
-              className="h-full bg-yellow-500 transition-all duration-500 rounded-full"
+              className="h-full bg-yellow-500 transition-all duration-700 ease-out rounded-full"
               style={{ width: `${progress}%` }}
               data-testid="progress-bar"
             />
           </div>
-          <p className="text-slate-500 text-sm mt-2">
+          <p className="text-slate-600 text-sm">
             {checkedCount} of {checklist.length} items ready
-            {isAuthenticated && syncStatus === 'synced' && (
-              <span className="text-green-600 ml-2">• Synced</span>
-            )}
-            {isAuthenticated && !syncing && syncStatus === 'error' && (
-              <span className="text-red-600 ml-2">• Sync failed</span>
-            )}
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="flex-1 flex items-center justify-center gap-2 bg-yellow-500 text-blue-950 font-semibold py-3 rounded-xl hover:bg-yellow-400 transition-colors"
-            data-testid="add-item-btn"
-          >
-            <Plus className="w-5 h-5" />
-            Add Item
-          </button>
+        <div className="flex gap-3">
           <button
             onClick={resetChecklist}
-            className="px-4 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-blue-950 text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition-all duration-300 transform hover:scale-105"
             data-testid="reset-checks-btn"
             title="Uncheck all items"
           >
             <RotateCcw className="w-5 h-5" />
+            Reset All
           </button>
         </div>
-
-        {/* Add Item Form */}
-        {showAddForm && (
-          <div className="bg-white rounded-xl p-4 space-y-3 animate-fadeIn" data-testid="add-item-form">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-3 text-slate-700"
-              data-testid="category-select"
-            >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newItem}
-                onChange={(e) => setNewItem(e.target.value)}
-                placeholder="Enter item name..."
-                className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl p-3 text-slate-700 focus:border-yellow-500"
-                onKeyPress={(e) => e.key === 'Enter' && addItem()}
-                data-testid="new-item-input"
-              />
-              <button
-                onClick={addItem}
-                className="px-4 bg-blue-950 text-white rounded-xl hover:bg-blue-900 transition-colors"
-                data-testid="save-item-btn"
-              >
-                <Save className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Checklist by Category */}
         <div className="space-y-4" data-testid="checklist-categories">
           {groupedItems.map(({ category, items }) => (
-            <div key={category} className="bg-white rounded-xl overflow-hidden">
-              <div className={`p-3 ${categoryColors[category]} flex items-center justify-between`}>
-                <h3 className="text-white font-bold text-sm">{category}</h3>
-                <span className="text-white/80 text-xs">
+            <div 
+              key={category} 
+              className="bg-white rounded-xl overflow-hidden shadow-md border border-slate-200 transform transition-all duration-300 hover:shadow-lg"
+            >
+              <div className={`p-4 ${categoryColors[category]} flex items-center justify-between`}>
+                <h3 className="text-white font-bold text-base">{category}</h3>
+                <span className="text-white/80 text-sm">
                   {items.filter(i => i.checked).length}/{items.length}
                 </span>
               </div>
@@ -257,7 +167,7 @@ export default function GoBagChecklist() {
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="checklist-item flex items-center justify-between p-4"
+                    className="checklist-item flex items-center justify-between p-4 hover:bg-slate-50 transition-colors duration-200"
                     data-testid={`checklist-item-${item.id}`}
                   >
                     <button
@@ -265,30 +175,21 @@ export default function GoBagChecklist() {
                       className="flex items-center gap-3 flex-1"
                       data-testid={`toggle-item-${item.id}`}
                     >
-                      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${
+                      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${
                         item.checked 
-                          ? 'bg-green-500 border-green-500' 
+                          ? 'bg-green-500 border-green-500 transform scale-110' 
                           : 'border-slate-300'
                       }`}>
                         {item.checked && <Check className="w-4 h-4 text-white" />}
                       </div>
-                      <span className={`text-sm transition-all ${
+                      <span className={`text-sm transition-all duration-300 ${
                         item.checked 
-                          ? 'text-slate-400 line-through' 
+                          ? 'text-slate-500 line-through' 
                           : 'text-slate-700'
                       }`}>
                         {item.item}
                       </span>
                     </button>
-                    {!defaultChecklist.find(d => d.id === item.id) && (
-                      <button
-                        onClick={() => deleteItem(item.id)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        data-testid={`delete-item-${item.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
@@ -299,12 +200,38 @@ export default function GoBagChecklist() {
         {/* Reset Button */}
         <button
           onClick={resetToDefault}
-          className="w-full text-slate-500 text-sm py-2 hover:text-slate-700"
+          className="w-full text-blue-950 text-sm py-3 bg-yellow-500 hover:bg-yellow-400 rounded-xl transition-all duration-300 transform hover:scale-105 font-semibold"
           data-testid="reset-default-btn"
         >
-          Reset to default checklist
+          Reset to Default Checklist
         </button>
       </main>
+
+      <style jsx>{`
+        @keyframes blob {
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }

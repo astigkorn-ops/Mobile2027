@@ -44,132 +44,151 @@ export default function TyphoonDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100" data-testid="typhoon-dashboard-page">
-      <Header title="TYPHOON DASHBOARD" showBack icon={Cloud} />
+    <div className="relative min-h-screen bg-white">
+      {/* Animated pattern overlay */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}></div>
+      </div>
       
-      <main className="px-4 py-6 max-w-2xl mx-auto space-y-6">
-        {/* Monitoring Alert */}
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-center gap-3" data-testid="typhoon-alert">
-          <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
-          <div>
-            <h2 className="text-blue-950 font-bold text-lg">TYPHOON MONITORING</h2>
-            <p className="text-slate-600 text-sm">Active weather disturbance detected</p>
-          </div>
-        </div>
+      {/* Animated elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-950/5 rounded-full animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-24 h-24 bg-yellow-500/5 rounded-full animate-bounce"></div>
+        <div className="absolute bottom-20 left-1/4 w-20 h-20 bg-blue-950/5 rounded-full animate-ping"></div>
+      </div>
 
-        {/* Satellite Image */}
-        <div className="satellite-container bg-white rounded-xl overflow-hidden" data-testid="satellite-container">
-          <div className="p-3 bg-slate-50 border-b flex items-center justify-between">
-            <span className="text-blue-950 font-semibold text-sm">Live Update Himawari-8 Satellite Image</span>
-            <button
-              onClick={handleRefresh}
-              className={`p-2 rounded-full hover:bg-slate-200 transition-colors ${isRefreshing ? 'animate-spin' : ''}`}
-              data-testid="refresh-btn"
-            >
-              <RefreshCw className="w-4 h-4 text-blue-950" />
-            </button>
-          </div>
-          <div className="relative">
-            <img
-              src="https://src.meteopilipinas.gov.ph/repo/mtsat-colored/24hour/latest-him-colored.gif"
-              alt="Himawari-8 Satellite Image"
-              className="w-full h-auto"
-              data-testid="satellite-image"
-            />
-            {/* Philippines boundary overlay indicator */}
-            <div className="absolute top-4 left-4 bg-black/50 text-white text-xs px-2 py-1 rounded">
-              Philippine Area of Responsibility
+      <div className="relative z-10">
+        <Header title="TYPHOON DASHBOARD" icon={Cloud} />
+        
+        <main className="px-4 py-6 max-w-2xl mx-auto space-y-6">
+          {/* Monitoring Alert */}
+          <div className="relative bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-200 rounded-xl p-4 flex items-center gap-3 shadow-lg" data-testid="typhoon-alert">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-100/10 rounded-xl"></div>
+            <div className="relative z-10">
+              <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
+            </div>
+            <div className="relative z-10">
+              <h2 className="text-blue-950 font-bold text-lg">TYPHOON MONITORING</h2>
+              <p className="text-blue-950/70 text-sm">Active weather disturbance detected</p>
             </div>
           </div>
-        </div>
 
-        {/* Typhoon Tracking */}
-        <div className="bg-white rounded-xl overflow-hidden" data-testid="typhoon-tracking">
-          <div className="p-4 bg-amber-50 border-b border-amber-200">
-            <h3 className="text-red-700 font-bold text-lg">Typhoon Tracking</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <MapPin className="w-4 h-4 text-red-700" />
-              <span className="text-red-700 text-xs">
-                As of: {new Date().toLocaleTimeString('en-PH', { 
-                  timeZone: 'Asia/Manila',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}, {new Date().toLocaleDateString('en-PH', { 
-                  timeZone: 'Asia/Manila',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })} • Coordinates: {typhoonData.position}
-              </span>
-            </div>
-          </div>
-          
-          <div className="divide-y divide-slate-100">
-            <InfoRow 
-              label="Typhoon Name" 
-              value={`${typhoonData.name} (${typhoonData.localName})`}
-              highlight
-            />
-            <InfoRow label="Current Position" value={typhoonData.position} />
-            <InfoRow label="Max Wind Speed" value={typhoonData.maxWindSpeed} icon={Wind} />
-            <InfoRow label="Movement" value={typhoonData.movement} icon={Navigation} />
-            <InfoRow label="Intensity" value={typhoonData.intensity} icon={Gauge} highlight />
-            <InfoRow label="Central Pressure" value={typhoonData.pressure} />
-          </div>
-        </div>
-
-        {/* Forecast Track */}
-        <div className="bg-white rounded-xl overflow-hidden" data-testid="forecast-track">
-          <div className="p-4 bg-blue-50 border-b border-blue-200">
-            <h3 className="text-blue-950 font-bold text-lg">Forecast Track</h3>
-          </div>
-          
-          <div className="p-4 space-y-3">
-            {typhoonData.forecast.map((point, index) => (
-              <div 
-                key={point.time}
-                className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                data-testid={`forecast-${point.time}`}
+          {/* Satellite Image */}
+          <div className="satellite-container bg-white border-2 border-blue-950/20 rounded-xl overflow-hidden shadow-lg" data-testid="satellite-container">
+            <div className="p-3 bg-gradient-to-r from-blue-950 to-blue-800 border-b flex items-center justify-between">
+              <span className="text-white font-semibold text-sm">Live Update Himawari-8 Satellite Image</span>
+              <button
+                onClick={handleRefresh}
+                className={`p-2 rounded-full hover:bg-blue-800 transition-colors ${isRefreshing ? 'animate-spin' : ''}`}
+                data-testid="refresh-btn"
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                    index === 0 ? 'bg-red-500' : index === 1 ? 'bg-orange-500' : 'bg-yellow-500'
-                  }`}>
-                    {point.time}
-                  </div>
-                  <span className="text-slate-600 text-sm">{point.position}</span>
-                </div>
-                <span className="text-blue-950 font-medium text-sm">{point.intensity}</span>
+                <RefreshCw className="w-4 h-4 text-white" />
+              </button>
+            </div>
+            <div className="relative">
+              <img
+                src="https://src.meteopilipinas.gov.ph/repo/mtsat-colored/24hour/latest-him-colored.gif"
+                alt="Himawari-8 Satellite Image"
+                className="w-full h-auto"
+                data-testid="satellite-image"
+              />
+              {/* Philippines boundary overlay indicator */}
+              <div className="absolute top-4 left-4 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                Philippine Area of Responsibility
               </div>
-            ))}
+            </div>
           </div>
-        </div>
 
-        {/* Last Update */}
-        <p className="text-center text-slate-500 text-xs" data-testid="last-update">
-          Last updated: {typhoonData.lastUpdate}
-        </p>
+          {/* Typhoon Tracking */}
+          <div className="bg-white border-2 border-blue-950/20 rounded-xl overflow-hidden shadow-lg" data-testid="typhoon-tracking">
+            <div className="p-4 bg-gradient-to-r from-yellow-500 to-yellow-400 border-b border-yellow-200">
+              <h3 className="text-blue-950 font-bold text-lg">Typhoon Tracking</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <MapPin className="w-4 h-4 text-blue-950" />
+                <span className="text-blue-950/80 text-xs">
+                  As of: {new Date().toLocaleTimeString('en-PH', { 
+                    timeZone: 'Asia/Manila',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}, {new Date().toLocaleDateString('en-PH', { 
+                    timeZone: 'Asia/Manila',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })} • Coordinates: {typhoonData.position}
+                </span>
+              </div>
+            </div>
+            
+            <div className="divide-y divide-blue-950/10">
+              <InfoRow 
+                label="Typhoon Name" 
+                value={`${typhoonData.name} (${typhoonData.localName})`}
+                highlight
+              />
+              <InfoRow label="Current Position" value={typhoonData.position} />
+              <InfoRow label="Max Wind Speed" value={typhoonData.maxWindSpeed} icon={Wind} />
+              <InfoRow label="Movement" value={typhoonData.movement} icon={Navigation} />
+              <InfoRow label="Intensity" value={typhoonData.intensity} icon={Gauge} highlight />
+              <InfoRow label="Central Pressure" value={typhoonData.pressure} />
+            </div>
+          </div>
 
-        {/* Historical Data Link */}
-        <button
-          onClick={() => navigate('/typhoon-history')}
-          className="w-full bg-white border-2 border-slate-300 text-blue-950 font-semibold py-4 rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
-          data-testid="view-history-btn"
-        >
-          <History className="w-5 h-5" />
-          <span>View Typhoon History & Analytics</span>
-        </button>
-      </main>
+          {/* Forecast Track */}
+          <div className="bg-white border-2 border-blue-950/20 rounded-xl overflow-hidden shadow-lg" data-testid="forecast-track">
+            <div className="p-4 bg-gradient-to-r from-blue-950 to-blue-800 border-b border-blue-200">
+              <h3 className="text-white font-bold text-lg">Forecast Track</h3>
+            </div>
+            
+            <div className="p-4 space-y-3">
+              {typhoonData.forecast.map((point, index) => (
+                <div 
+                  key={point.time}
+                  className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-950/10"
+                  data-testid={`forecast-${point.time}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                      index === 0 ? 'bg-red-500' : index === 1 ? 'bg-orange-500' : 'bg-yellow-500'
+                    }`}>
+                      {point.time}
+                    </div>
+                    <span className="text-blue-950/70 text-sm">{point.position}</span>
+                  </div>
+                  <span className="text-blue-950 font-medium text-sm">{point.intensity}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Last Update */}
+          <p className="text-center text-blue-950/60 text-xs" data-testid="last-update">
+            Last updated: {typhoonData.lastUpdate}
+          </p>
+
+          {/* Historical Data Link */}
+          <button
+            onClick={() => navigate('/typhoon-history')}
+            className="w-full bg-gradient-to-r from-blue-950 to-blue-800 text-white font-semibold py-4 rounded-xl hover:from-blue-800 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+            data-testid="view-history-btn"
+          >
+            <History className="w-5 h-5" />
+            <span>View Typhoon History & Analytics</span>
+          </button>
+        </main>
+      </div>
     </div>
   );
 }
 
 function InfoRow({ label, value, icon: Icon, highlight }) {
   return (
-    <div className="flex items-center justify-between p-4 typhoon-info-card">
+    <div className="flex items-center justify-between p-4 typhoon-info-card hover:bg-blue-50 transition-colors">
       <div className="flex items-center gap-2">
         {Icon && <Icon className="w-4 h-4 text-blue-950" />}
-        <span className="text-slate-600 text-sm">{label}</span>
+        <span className="text-blue-950/70 text-sm">{label}</span>
       </div>
       <span className={`font-semibold text-sm ${highlight ? 'text-red-600' : 'text-blue-950'}`}>
         {value}
