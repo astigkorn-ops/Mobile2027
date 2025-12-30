@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import '@/App.css';
 import { Toaster } from 'sonner';
+import toast, { Toaster as HotToaster } from 'react-hot-toast';
 import { TyphoonAlertWatcher } from './components/TyphoonAlertWatcher';
 import { AuthProvider } from './contexts/AuthContext';
 import Home from './pages/Home';
@@ -56,6 +57,7 @@ function App() {
     <BrowserRouter>
         <TyphoonAlertWatcher />
         <Toaster position="top-center" expand={true} richColors />
+        <HotToaster position="top-center" />
       <AuthProvider>
         <AppContent />
       </AuthProvider>

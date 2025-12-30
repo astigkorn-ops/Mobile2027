@@ -4,61 +4,60 @@ import { useGeolocated } from 'react-geolocated';
 import { useDropzone } from 'react-dropzone';
 import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
-import {
-  Camera, Download, RotateCcw, Settings, MapPin, Zap, ZapOff,
+import { 
+  Camera, Download, RotateCcw, Settings, MapPin, Zap, ZapOff, 
   Grid3X3, ZoomIn, ZoomOut, FlipHorizontal, Upload, X, Image as ImageIcon,
   Type, Sliders, Eye, EyeOff, Trash2, Save, RefreshCw
 } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Slider } from '../components/ui/slider';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Switch } from '../components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'react-hot-toast';
-import { embedExifData } from '../utils/exifHandler';
-import { cn } from '../lib/utils';
-import { Header } from '../components/Header';
+import { embedExifData } from '@/utils/exifHandler';
 
-export default function GeotagCamera() {
+export default function GeoSnapStudio() {
   // Camera state
   const [facingMode, setFacingMode] = useState('environment');
   const [showGrid, setShowGrid] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [capturedImage, setCapturedImage] = useState(null);
   const [flashMode, setFlashMode] = useState('off');
-
+  
   // Watermark state
   const [watermarkLogo, setWatermarkLogo] = useState(null);
   const [logoPosition, setLogoPosition] = useState({ x: 20, y: 20 });
   const [logoSize, setLogoSize] = useState(100);
   const [logoOpacity, setLogoOpacity] = useState(100);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
-
+  
   // Text overlay state
-  const [eventTitle, setEventTitle] = useState('Geotagged Photo');
-  const [eventSubtitle, setEventSubtitle] = useState('Captured with GPS location');
+  const [eventTitle, setEventTitle] = useState('GeoSnap Studio');
+  const [eventSubtitle, setEventSubtitle] = useState('Professional Geotagging');
   const [textColor, setTextColor] = useState('#FBBF24');
   const [fontSize, setFontSize] = useState(24);
   const [showEventText, setShowEventText] = useState(true);
-
+  
   // Geotag state
   const [showGeoData, setShowGeoData] = useState(true);
   const [showAddress, setShowAddress] = useState(true);
   const [address, setAddress] = useState('');
-
+  
   // Settings state
   const [imageQuality, setImageQuality] = useState('high');
+  const [gpsUpdateInterval, setGpsUpdateInterval] = useState(5000);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState('default');
-
+  
   // Refs
   const webcamRef = useRef(null);
   const previewRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
-
+  
   // Geolocation hook
   const { coords, isGeolocationAvailable, isGeolocationEnabled } = useGeolocated({
     positionOptions: {
@@ -109,12 +108,12 @@ export default function GeotagCamera() {
     const imageSrc = webcamRef.current?.getScreenshot();
     if (imageSrc) {
       setCapturedImage(imageSrc);
-
+      
       // Fetch address if coords available
       if (coords && showAddress) {
         fetchAddress(coords.latitude, coords.longitude);
       }
-
+      
       toast.success('Photo captured!');
     }
   }, [coords, showAddress]);
@@ -130,7 +129,7 @@ export default function GeotagCamera() {
 
     try {
       toast.loading('Generating image with EXIF data...');
-
+      
       const canvas = await html2canvas(previewRef.current, {
         backgroundColor: '#000000',
         scale: imageQuality === 'high' ? 2 : imageQuality === 'medium' ? 1.5 : 1,
@@ -151,17 +150,17 @@ export default function GeotagCamera() {
             accuracy: coords.accuracy || undefined,
           },
           timestamp: new Date(),
-          software: 'Geotag Camera v1.0',
+          software: 'GeoSnap Studio v1.0',
           imageDescription: `${eventTitle} - ${eventSubtitle}`,
         });
       }
 
       const link = document.createElement('a');
       const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
-      link.download = `geotag_${timestamp}.jpg`;
+      link.download = `geosnap_${timestamp}.jpg`;
       link.href = imageDataUrl;
       link.click();
-
+      
       toast.dismiss();
       toast.success('Image with EXIF data downloaded!');
     } catch (error) {
@@ -245,7 +244,7 @@ export default function GeotagCamera() {
       <div className="bg-slate-900/90 backdrop-blur-md border-b border-blue-500/30 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Camera className="w-6 h-6 text-blue-400" />
-          <h1 className="text-xl font-bold text-white">Geotag Camera HD</h1>
+          <h1 className="text-xl font-bold text-white">GeoSnap Studio</h1>
         </div>
         <Button
           variant="outline"
@@ -275,7 +274,7 @@ export default function GeotagCamera() {
                 className="w-full h-full object-cover"
                 style={{ transform: `scale(${zoomLevel})` }}
               />
-
+              
               {/* Grid Overlay */}
               {showGrid && (
                 <div className="absolute inset-0 pointer-events-none">
