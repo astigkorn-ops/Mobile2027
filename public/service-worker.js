@@ -225,6 +225,47 @@ self.addEventListener('sync', (event) => {
   }
 });
 
+// Background sync for critical data
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-critical-data') {
+    event.waitUntil(syncCriticalData());
+  }
+});
+
+// Push notification handler
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received:', event.data?.text() || 'No data');
+  
+  if (event.data) {
+    const payload = event.data.json();
+    const options = {
+      body: payload.body || 'New alert from MDRRMO',
+      icon: '/logome.webp',
+      badge: '/logome.webp',
+      vibrate: [100, 50, 100],
+      data: {
+        dateOfArrival: Date.now(),
+        primaryKey: payload.url || '/'
+      }
+    };
+    
+    event.waitUntil(
+      self.registration.showNotification(payload.title || 'MDRRMO Alert', options)
+    );
+  }
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked');
+  
+  event.notification.close();
+  
+  event.waitUntil(
+    clients.openWindow(event.notification.data?.primaryKey || '/')
+  );
+});
+
 // Queue an incident for later synchronization
 async function queueIncidentRequest(request) {
   try {
@@ -293,26 +334,88 @@ async function syncQueuedIncidents() {
 
 // Helper function to sync a single incident
 async function syncIncident(incident) {
-  const response = await fetch('/api/incidents', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(incident.data)
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to sync incident');
+  try {
+    // Try to sync with Supabase
+    const supabaseUrl = self.SUPABASE_URL || 'https://your-project.supabase.co';
+    const supabaseKey = self.SUPABASE_ANON_KEY || '';
+    
+    if (supabaseKey) {
+      // Using fetch to call Supabase API directly
+      const response = await fetch(`${supabaseUrl}/rest/v1/incidents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        },
+        body: JSON.stringify(incident.data)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Supabase sync failed with status: ${response.status}`);
+      }
+      
+      // Remove from IndexedDB after successful sync
+      const db = await openDB();
+      const tx = db.transaction('incidents', 'readwrite');
+      const store = tx.objectStore('incidents');
+      await store.delete(incident.id);
+      await tx.complete;
+      
+      return response.json();
+    } else {
+      // Fallback to regular API endpoint if Supabase not configured
+      const response = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(incident.data)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to sync incident');
+      }
+      
+      // Remove from IndexedDB after successful sync
+      const db = await openDB();
+      const tx = db.transaction('incidents', 'readwrite');
+      const store = tx.objectStore('incidents');
+      await store.delete(incident.id);
+      await tx.complete;
+      
+      return response.json();
+    }
+  } catch (error) {
+    console.error('[SW] Failed to sync incident:', error);
+    throw error;
   }
-  
-  // Remove from IndexedDB after successful sync
-  const db = await openDB();
-  const tx = db.transaction('incidents', 'readwrite');
-  const store = tx.objectStore('incidents');
-  await store.delete(incident.id);
-  await tx.complete;
-  
-  return response.json();
+}
+
+// Sync critical data when back online
+async function syncCriticalData() {
+  try {
+    console.log('[SW] Syncing critical data...');
+    
+    // Fetch and cache critical endpoints
+    const promises = API_ENDPOINTS.map(async (endpoint) => {
+      try {
+        const response = await fetch(endpoint);
+        if (response.ok) {
+          const cache = await caches.open(API_CACHE);
+          await cache.put(endpoint, response.clone());
+          console.log(`[SW] Synced critical data: ${endpoint}`);
+        }
+      } catch (error) {
+        console.error(`[SW] Failed to sync critical data for ${endpoint}:`, error);
+      }
+    });
+    
+    await Promise.allSettled(promises);
+    console.log('[SW] Critical data sync completed');
+  } catch (error) {
+    console.error('[SW] Critical data sync failed:', error);
+  }
 }
 
 // IndexedDB helpers
@@ -355,6 +458,13 @@ self.addEventListener('message', (event) => {
       caches.open(RUNTIME_CACHE).then((cache) => {
         return cache.addAll(event.data.urls);
       })
+    );
+  }
+  
+  // Handle sync request from client
+  if (event.data && event.data.type === 'REQUEST_SYNC') {
+    event.waitUntil(
+      syncQueuedIncidents()
     );
   }
 });

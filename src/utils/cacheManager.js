@@ -70,11 +70,63 @@ class CacheManager {
     }
   }
 
-  // Pre-cache map tiles if needed
-  async preCacheMapTiles() {
-    // This would be implemented based on the specific map tile system used
-    // For now, we'll just log this for future implementation
-    console.log('[CacheManager] Map tile caching would be implemented here');
+  // Cache map tiles if needed
+  async cacheMapTiles(tileUrls) {
+    if (!tileUrls || !Array.isArray(tileUrls) || tileUrls.length === 0) {
+      console.log('[CacheManager] No map tiles to cache');
+      return;
+    }
+    
+    if ('caches' in window) {
+      const cache = await caches.open(this.cacheNames.runtime);
+      const requests = tileUrls.map(url => new Request(url));
+      await cache.addAll(requests);
+      console.log(`[CacheManager] Cached ${tileUrls.length} map tiles`);
+    }
+  }
+
+  // Cache hotline data specifically
+  async cacheHotlineData() {
+    try {
+      const response = await fetch(`${this.baseURL}/api/hotlines`);
+      if (response.ok) {
+        const data = await response.json();
+        if ('caches' in window) {
+          const cache = await caches.open(this.cacheNames.api);
+          const responseToCache = new Response(JSON.stringify(data), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+          await cache.put(`${this.baseURL}/api/hotlines`, responseToCache);
+        }
+        console.log('[CacheManager] Hotline data cached successfully');
+        return data;
+      }
+    } catch (error) {
+      console.error('[CacheManager] Failed to cache hotline data:', error);
+      throw error;
+    }
+  }
+
+  // Cache map location data specifically
+  async cacheMapLocationData() {
+    try {
+      const response = await fetch(`${this.baseURL}/api/map/locations`);
+      if (response.ok) {
+        const data = await response.json();
+        if ('caches' in window) {
+          const cache = await caches.open(this.cacheNames.api);
+          const responseToCache = new Response(JSON.stringify(data), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+          await cache.put(`${this.baseURL}/api/map/locations`, responseToCache);
+        }
+        console.log('[CacheManager] Map location data cached successfully');
+        return data;
+      }
+    } catch (error) {
+      console.error('[CacheManager] Failed to cache map location data:', error);
+      throw error;
+    }
   }
 
   // Clear old cache data

@@ -1,63 +1,21 @@
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
-import '@/App.css';
-import { Toaster } from 'sonner';
-import toast, { Toaster as HotToaster } from 'react-hot-toast';
-import { TyphoonAlertWatcher } from './components/TyphoonAlertWatcher';
-import { AuthProvider } from './contexts/AuthContext';
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import GeotagCamera from './pages/GeotagCamera';
-import HotlineNumbers from './pages/HotlineNumbers';
-import ReportIncident from './pages/ReportIncident';
-import TyphoonDashboard from './pages/TyphoonDashboard';
-import TyphoonHistory from './pages/TyphoonHistory';
-import InteractiveMap from './pages/InteractiveMap';
-import DisasterGuidelines from './pages/DisasterGuidelines';
-import SupportResources from './pages/SupportResources';
-import EmergencyPlan from './pages/EmergencyPlan';
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import TyphoonForm from './pages/TyphoonForm';
-import MapLayerForm from './pages/MapLayerForm';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner';
+import { HotToaster } from '@/components/ui/toast';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { TyphoonAlertWatcher } from '@/components/TyphoonAlertWatcher';
+import AppContent from './AppContent';
 
-import { OfflineIndicator } from './components/OfflineIndicator';
-import BottomNavBar from './components/BottomNavBar';
-
-function AppContent() {
-  const location = useLocation();
-  
-  // Show bottom nav bar on main tabs except Interactive Map and Disaster Guidelines
-  const showBottomNav = ['/', '/dashboard', '/hotlines'].includes(location.pathname);
-
-  return (
-    <div className="App min-h-screen bg-blue-950 mx-auto" style={{ maxWidth: '430px' }}>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/typhoons/new" element={<TyphoonForm />} />
-        <Route path="/admin/typhoons/:id" element={<TyphoonForm />} />
-        <Route path="/admin/typhoons/:id/edit" element={<TyphoonForm />} />
-        <Route path="/admin/locations/new" element={<MapLayerForm />} />
-        <Route path="/admin/locations/:id" element={<MapLayerForm />} />
-        <Route path="/admin/locations/:id/edit" element={<MapLayerForm />} />
-        <Route path="/geotag-camera" element={<GeotagCamera />} />
-        <Route path="/hotlines" element={<HotlineNumbers />} />
-        <Route path="/report-incident" element={<ReportIncident />} />
-        <Route path="/typhoon-dashboard" element={<TyphoonDashboard />} />
-        <Route path="/typhoon-history" element={<TyphoonHistory />} />
-        <Route path="/interactive-map" element={<InteractiveMap />} />
-        <Route path="/disaster-guidelines" element={<DisasterGuidelines />} />
-        <Route path="/support-resources" element={<SupportResources />} />
-        <Route path="/emergency-plan" element={<EmergencyPlan />} />
-      </Routes>
-      
-      {showBottomNav && <BottomNavBar />}
-      <OfflineIndicator />
-    </div>
-  );
-}
+// PWA Installation Handler
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent the mini-infobar from appearing on mobile
+  e.preventDefault();
+  // Stash the event so it can be triggered later
+  deferredPrompt = e;
+  // Show install button or UI element to trigger installation
+  console.log('PWA installation is available');
+});
 
 function App() {
   // Handle messages from service worker
@@ -82,6 +40,22 @@ function App() {
       navigator.serviceWorker.removeEventListener('message', handleMessage);
     };
   }, []);
+
+  // Function to trigger PWA installation
+  const triggerPWAInstall = () => {
+    if (deferredPrompt) {
+      // Show the install prompt
+      deferredPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      deferredPrompt.userChoice.then((choiceResult) => {
+        console.log(`User response to install: ${choiceResult.outcome}`);
+        deferredPrompt = null;
+      });
+    }
+  };
+
+  // Make the install function globally available
+  window.triggerPWAInstall = triggerPWAInstall;
 
   return (
     <BrowserRouter>

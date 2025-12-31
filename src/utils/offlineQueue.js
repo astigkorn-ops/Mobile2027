@@ -42,6 +42,7 @@ class OfflineQueueManager {
           objectStore.createIndex('synced', 'synced', { unique: false });
           objectStore.createIndex('type', 'type', { unique: false });
           
+          console.log('[OfflineQueue] Object store created');
         }
       };
     });
@@ -74,6 +75,7 @@ class OfflineQueueManager {
         if ('serviceWorker' in navigator && 'SyncManager' in window) {
           navigator.serviceWorker.ready.then(registration => {
             registration.sync.register('sync-incidents')
+              .then(() => console.log('[OfflineQueue] Background sync registered'))
               .catch(err => console.error('[OfflineQueue] Failed to register background sync:', err));
           });
         }
@@ -211,6 +213,7 @@ class OfflineQueueManager {
         if ('serviceWorker' in navigator && 'SyncManager' in window) {
           navigator.serviceWorker.ready.then(registration => {
             registration.sync.register('sync-incidents')
+              .then(() => console.log('[OfflineQueue] Background sync registered'))
               .catch(err => console.error('[OfflineQueue] Failed to register background sync:', err));
           });
         }
@@ -261,13 +264,30 @@ class OfflineQueueManager {
           // Try to send item to server based on type
           let response;
           if (item.type === 'incident') {
-            response = await fetch('/api/incidents', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(item.data),
-            });
+            // Handle incident data with Supabase
+            const createClient = await import('../lib/supabase').then(mod => mod.createClient);
+            const supabase = createClient();
+            
+            if (supabase) {
+              const { data, error } = await supabase
+                .from('incidents')
+                .insert([item.data]);
+              
+              if (error) {
+                throw error;
+              }
+              
+              response = { ok: true, data };
+            } else {
+              // Fallback to regular API endpoint if Supabase not configured
+              response = await fetch('/api/incidents', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(item.data),
+              });
+            }
           } else {
             // For other types, you can implement specific endpoints
             console.warn(`[OfflineQueue] Unknown item type: ${item.type}, using generic endpoint`);
@@ -280,17 +300,17 @@ class OfflineQueueManager {
             });
           }
 
-          if (response.ok) {
+          if (response.ok || (response.data && !response.error)) {
             await this.markAsSynced(item.id);
             results.success++;
             console.log(`[OfflineQueue] Successfully synced ${item.type} item:`, item.id);
           } else {
             results.failed++;
-            console.error(`[OfflineQueue] Failed to sync ${item.type} item:`, item.id, response.status);
+            console.error(`[OfflineQueue] Failed to sync ${item.type} item:`, item.id, response.status || response.error);
             results.errors.push({
               id: item.id,
               type: item.type,
-              error: `Server responded with ${response.status}`,
+              error: `Server responded with ${response.status || response.error}`,
             });
           }
         } catch (error) {
@@ -310,6 +330,18 @@ class OfflineQueueManager {
       }
 
       console.log(`[OfflineQueue] Sync completed: ${results.success} success, ${results.failed} failed`);
+      
+      // Notify all clients about sync completion
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.active?.postMessage({
+            type: 'SYNC_COMPLETE',
+            synced: results.success,
+            failed: results.failed
+          });
+        });
+      }
+      
       return results;
     } catch (error) {
       console.error('[OfflineQueue] Sync process failed:', error);

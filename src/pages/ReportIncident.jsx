@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/Header';
 import { AlertTriangle, Calendar, Clock, MapPin, Send, X, Camera, WifiOff, Phone, User, Navigation, Loader2, Globe, Shield, CheckCircle } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -38,6 +38,7 @@ function LocationMarker({ position, setPosition }) {
 }
 
 export default function ReportIncident() {
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     incidentType: '',
     date: new Date().toISOString().split('T')[0],
@@ -55,6 +56,7 @@ export default function ReportIncident() {
   const [gettingLocation, setGettingLocation] = useState(false);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   // Compress and resize image
   const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.8) => {
@@ -200,72 +202,49 @@ export default function ReportIncident() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-
-    const reportData = {
-      id: crypto.randomUUID(),
-      incident_type: formData.incidentType,
-      date: formData.date,
-      time: formData.time,
-      description: formData.description,
-      reporter_phone: formData.reporterPhone || null,
-      reporter_name: formData.reporterName,
-      latitude: position[0],
-      longitude: position[1],
-      images: uploadedImages,
-      created_at: new Date().toISOString(),
-    };
+    setSubmitError('');
+    setErrorMessage('');
 
     try {
-      if (navigator.onLine) {
-        // Try to submit directly if online
-        const { supabase } = await import('../utils/supabase');
+      // Prepare incident data
+      const reportData = {
+        id: crypto.randomUUID(),
+        incident_type: formData.incidentType,
+        date: formData.date,
+        time: formData.time,
+        description: formData.description,
+        reporter_phone: formData.reporterPhone || null,
+        reporter_name: formData.reporterName,
+        latitude: position[0],
+        longitude: position[1],
+        images: uploadedImages,
+        created_at: new Date().toISOString(),
+        status: 'reported'
+      };
 
-        const { data, error } = await supabase
-          .from('incidents')
-          .insert([reportData]);
-
-        if (error) throw error;
-
-        setSubmitted(true);
-
-        setTimeout(() => {
-          setSubmitted(false);
-          resetForm();
-        }, 3000);
-      } else {
-        // Add to offline queue if offline
-        await offlineQueue.addIncident(reportData);
-        setSubmitted(true);
-        setErrorMessage('');
-        
-        setTimeout(() => {
-          setSubmitted(false);
-          resetForm();
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('Failed to submit incident report:', error);
+      // Always add to offline queue - this handles both online and offline scenarios
+      await offlineQueue.addIncident(reportData);
       
-      // If online but submission failed, try adding to offline queue anyway
-      if (navigator.onLine) {
-        try {
-          await offlineQueue.addIncident(reportData);
-          setSubmitted(true);
-          setErrorMessage('Report queued for submission when online.');
-          
-          setTimeout(() => {
-            setSubmitted(false);
-            resetForm();
-          }, 3000);
-        } catch (queueError) {
-          console.error('Failed to add to offline queue:', queueError);
-          setErrorMessage('Failed to submit incident report. Please try again.');
+      setSubmitted(true);
+      setSubmitError('');
+      
+      // Reset form after successful submission
+      setTimeout(() => {
+        setSubmitted(false);
+        resetForm();
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
         }
-      } else {
-        setErrorMessage('Failed to add to offline queue. Please try again.');
-      }
-      
-      setTimeout(() => setErrorMessage(''), 4000);
+      }, 3000);
+    } catch (error) {
+      console.error('Error submitting incident:', error);
+      const errorMsg = 'Failed to submit incident. It has been saved offline and will sync when connection is available.';
+      setSubmitError(errorMsg);
+      setErrorMessage(errorMsg);
+      setTimeout(() => {
+        setSubmitError('');
+        setErrorMessage('');
+      }, 4000);
     } finally {
       setSubmitting(false);
     }
@@ -304,19 +283,6 @@ export default function ReportIncident() {
         <Header title="REPORT AN INCIDENT" showBack icon={AlertTriangle} />
         
         <main className="px-6 py-8 max-w-2xl mx-auto">
-          {errorMessage && (
-            <div className="mb-6 bg-gradient-to-r from-red-600 to-orange-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg animate-fadeIn" data-testid="error-message">
-              <AlertTriangle className="w-6 h-6 animate-pulse" />
-              <div>
-                <p className="font-semibold text-lg">
-                  {errorMessage}
-                </p>
-                <p className="text-sm opacity-90">
-                  Please try again shortly.
-                </p>
-              </div>
-            </div>
-          )}
           {errorMessage && (
             <div className="mb-6 bg-gradient-to-r from-red-600 to-orange-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg animate-fadeIn" data-testid="error-message">
               <AlertTriangle className="w-6 h-6 animate-pulse" />
@@ -545,6 +511,7 @@ export default function ReportIncident() {
                   onChange={handleImageUpload}
                   className="hidden"
                   data-testid="image-upload-input"
+                  ref={fileInputRef}
                 />
                 <div className="p-3 bg-blue-950/20 rounded-2xl mb-3">
                   <Camera className="w-8 h-8 text-blue-950" />

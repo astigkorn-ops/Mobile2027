@@ -23,8 +23,42 @@ A progressive web application built with React and Tailwind CSS focused on disas
 - Tailwind CSS + PostCSS
 - shadcn/ui style components
 - Supabase (Backend as a Service - Database, Auth, API)
-- Service Worker (PWA) in /public/service-worker.js
+- Service Worker and PWA capabilities
 - CRACO configuration (craco.config.js) and custom Webpack plugins under /plugins
+
+## PWA Functionality
+
+Mobile2027 is a fully-featured Progressive Web App with the following capabilities:
+
+### 1. Installable App
+- Install as a standalone app on mobile and desktop
+- Custom app icons for different device sizes
+- App name and description configured in manifest.json
+- PWA installation prompt handling in App.js
+
+### 2. Offline Support
+- Service worker with cache-first strategy
+- Critical data caching (hotlines, map locations, guidelines)
+- Offline incident reporting queue
+- Automatic sync when connection is restored
+
+### 3. Push Notifications
+- Push notification handling in service worker
+- Notification click handling
+- Vibration and badge support
+
+### 4. Enhanced Mobile Experience
+- Mobile-optimized UI with responsive design
+- Proper viewport configuration
+- Touch-friendly interface components
+- Full-screen experience when installed
+
+Implemented in:
+- `public/manifest.json` - PWA metadata and configuration
+- `public/service-worker.js` - Service worker with caching and background sync
+- `public/index.html` - Proper PWA meta tags and links
+- `src/App.js` - PWA installation prompt handling
+- `src/utils/serviceWorkerRegistration.js` - Service worker registration
 
 ## Project Structure
 
@@ -104,11 +138,40 @@ This app has been migrated to use Supabase as the backend. To set up:
 
 The app will automatically use Supabase for authentication and data storage when these environment variables are set.
 
-## PWA and Offline
+## Offline Functionality
 
-- Service worker is located at public/service-worker.js and registered via src/utils/serviceWorkerRegistration.js.
-- Offline queueing utilities in src/utils/offlineQueue.js and cache handling in src/utils/cacheManager.js.
-- The OfflineIndicator component surfaces connectivity state.
+Mobile2027 implements comprehensive offline support with the following features:
+
+### 1. Caching Critical Data
+- Hotlines and emergency contacts
+- Map location data
+- Disaster guidelines
+- Checklists and resources
+- Typhoon data
+
+Implemented in:
+- `src/utils/cacheManager.js` - Handles pre-caching of critical API endpoints
+- `public/service-worker.js` - Service worker with cache-first strategy for critical endpoints
+
+### 2. Offline Incident Reporting Queue
+- Reports are stored in IndexedDB when offline
+- Works for both online and offline scenarios
+- Automatic synchronization when connection is restored
+
+Implemented in:
+- `src/utils/offlineQueue.js` - IndexedDB-based queue manager
+- `src/pages/ReportIncident.jsx` - Uses offline queue for submissions
+- `public/service-worker.js` - Background sync for queued incidents
+
+### 3. Sync When Back Online
+- Automatic synchronization when connection is restored
+- Background sync using the Background Sync API
+- Manual sync available through UI components
+
+Implemented in:
+- `src/utils/offlineQueue.js` - Automatic sync on online event
+- `public/service-worker.js` - Background sync handler
+- `src/components/OfflineIndicator.jsx` - Manual sync option
 
 ## Geolocation and Geotag Camera
 
