@@ -17,6 +17,8 @@ import SupportResources from './pages/SupportResources';
 import EmergencyPlan from './pages/EmergencyPlan';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
+import TyphoonForm from './pages/TyphoonForm';
+import MapLayerForm from './pages/MapLayerForm';
 
 import { OfflineIndicator } from './components/OfflineIndicator';
 import BottomNavBar from './components/BottomNavBar';
@@ -34,6 +36,12 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/typhoons/new" element={<TyphoonForm />} />
+        <Route path="/admin/typhoons/:id" element={<TyphoonForm />} />
+        <Route path="/admin/typhoons/:id/edit" element={<TyphoonForm />} />
+        <Route path="/admin/map-layers/new" element={<MapLayerForm />} />
+        <Route path="/admin/map-layers/:id" element={<MapLayerForm />} />
+        <Route path="/admin/map-layers/:id/edit" element={<MapLayerForm />} />
         <Route path="/geotag-camera" element={<GeotagCamera />} />
         <Route path="/hotlines" element={<HotlineNumbers />} />
         <Route path="/report-incident" element={<ReportIncident />} />

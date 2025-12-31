@@ -117,6 +117,7 @@ export default function TyphoonDashboard() {
               <InfoRow label="As of" value="03:00 AM, Dec 31, 2025" />
               <InfoRow label="Coordinates" value={typhoonData.position} />
               <InfoRow label="Current Location" value="East of Luzon" />
+              <InfoRow label="Typhoon Signal #" value="3" />
               <InfoRow label="Max Wind Speed" value={typhoonData.maxWindSpeed} icon={Wind} />
               <InfoRow label="Movement" value={typhoonData.movement} icon={Navigation} />
               <InfoRow label="Intensity" value={typhoonData.intensity} icon={Gauge} highlight={true} />
