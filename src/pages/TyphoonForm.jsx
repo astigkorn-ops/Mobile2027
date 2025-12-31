@@ -37,18 +37,6 @@ export default function TyphoonForm() {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    if (!user?.is_admin) {
-      navigate('/dashboard');
-      return;
-    }
-
-    if (typhoonId) {
-      setIsEditing(true);
-      fetchTyphoon();
-    }
-  }, [user, navigate, typhoonId, fetchTyphoon]);
-
   const fetchTyphoon = useCallback(async () => {
     try {
       setLoading(true);
@@ -83,8 +71,21 @@ export default function TyphoonForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase, typhoonId]);
 
+  useEffect(() => {
+    if (!user?.is_admin) {
+      navigate('/dashboard');
+      return;
+    }
+
+    if (typhoonId) {
+      setIsEditing(true);
+      fetchTyphoon();
+    }
+  }, [user, navigate, typhoonId, fetchTyphoon]);
+
+  
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
