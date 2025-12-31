@@ -1,5 +1,6 @@
 {
     "Lingma.localMachineModel": true,
     "Lingma.aI Chat.webToolsInAsk/AgentMode": "Auto-execute",
-    "Lingma.aI Chat.mcpToolsInAgentMode": true
+    "Lingma.aI Chat.mcpToolsInAgentMode": true,
+    "codeantai.javascriptDocstringFormat": "/**\n* Brief description of the function in one line\n* @example\n* functionName(sample_arg1, sample_arg2)\n* some sample return value\n* @param {type} {Argument} - Argument description in one line.\n* @returns {type} Return description in one line.\n* @description\n*   - Only write non obvious things about the function.\n*   - Do not write things that are explained above in the function description or inputs.\n*   - Never write more than 4 points.\n*/"
 }
