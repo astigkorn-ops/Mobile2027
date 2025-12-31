@@ -46,6 +46,7 @@ Mobile2027 is a fully-featured Progressive Web App with the following capabiliti
 - Push notification handling in service worker
 - Notification click handling
 - Vibration and badge support
+- Integration with typhoon alert system
 
 ### 4. Enhanced Mobile Experience
 - Mobile-optimized UI with responsive design
@@ -59,6 +60,7 @@ Implemented in:
 - `public/index.html` - Proper PWA meta tags and links
 - `src/App.js` - PWA installation prompt handling
 - `src/utils/serviceWorkerRegistration.js` - Service worker registration
+- `src/utils/notifications.js` - Notification subscription management
 
 ## Project Structure
 
@@ -118,9 +120,38 @@ Create a .env file in the project root for runtime config. Common variables:
 - REACT_APP_SUPABASE_URL (required for Supabase)
 - REACT_APP_SUPABASE_ANON_KEY (required for Supabase)
 - REACT_APP_MAPBOX_TOKEN (if using map services)
+- REACT_APP_VAPID_PUBLIC_KEY (for push notifications)
 - REACT_APP_SENTRY_DSN (optional)
 
 Variables must be prefixed with REACT_APP_ to be exposed to the client.
+
+## Push Notification Functionality
+
+Mobile2027 implements push notifications with the following features:
+
+### 1. Typhoon Alert Notifications
+- Real-time alerts when typhoons approach monitored areas
+- Customized notifications with typhoon name, signal level, and expected landfall time
+- Different icons based on signal level severity
+- Direct navigation to typhoon dashboard when notification is clicked
+
+### 2. Signal Warning Level Updates
+- Automatic notifications when signal warning levels change
+- Different vibration patterns and icons based on warning severity
+- Detailed information about the warning and recommended actions
+- Integration with typhoon tracking system
+
+### 3. Implementation Details
+- Service worker handles all push notification logic
+- Client-side subscription management via NotificationManager utility
+- Proper permission handling for notifications
+- Different notification types with custom styling and behavior
+
+Implemented in:
+- `public/service-worker.js` - Push notification handling and display logic
+- `src/utils/notifications.js` - Client-side notification subscription management
+- `src/components/TyphoonAlertWatcher.jsx` - Background monitoring for alerts
+- `src/pages/TyphoonDashboard.jsx` - Sending notifications for important updates
 
 ## Supabase Setup
 

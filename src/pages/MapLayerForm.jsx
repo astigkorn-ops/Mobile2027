@@ -1,82 +1,81 @@
 // src/pages/MapLayerForm.jsx
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// Fix for default markers in react-leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { supabase } from '../lib/supabase';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
+import { getSupabaseClient } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function MapLayerForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { user } = useAuth();
+  const { id: locationId } = useParams();
+  
   const [formData, setFormData] = useState({
-    type: '',
     name: '',
+    type: 'evacuation center',
     address: '',
     lat: '',
     lng: '',
+    hotline: '',
+    description: '',
     capacity: '',
-    hotline: ''
+    is_operational: true,
+    contact_person: '',
+    contact_phone: '',
+    is_approved: true,
   });
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      fetchMapLayer();
+    if (!user?.is_admin) {
+      navigate('/dashboard');
+      return;
     }
-  }, [id]);
 
-  const fetchMapLayer = async () => {
+    if (locationId) {
+      setIsEditing(true);
+      fetchLocation();
+    }
+  }, [user, navigate, locationId]);
+
+  const fetchLocation = async () => {
     try {
       setLoading(true);
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+      
       const { data, error } = await supabase
         .from('locations')
         .select('*')
-        .eq('id', id)
+        .eq('id', locationId)
         .single();
-      
-      if (error) throw error;
-      setFormData(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      let result;
-      
-      if (id) {
-        // Update existing map layer
-        result = await supabase
-          .from('locations')
-          .update(formData)
-          .eq('id', id);
-      } else {
-        // Create new map layer
-        result = await supabase
-          .from('locations')
-          .insert([formData]);
-      }
-      
-      if (result.error) throw result.error;
-      navigate('/admin');
-    } catch (err) {
-      setError(err.message);
+      if (error) throw error;
+      setFormData({
+        name: data.name || '',
+        type: data.type || 'evacuation center',
+        address: data.address || '',
+        lat: data.lat || '',
+        lng: data.lng || '',
+        hotline: data.hotline || '',
+        description: data.description || '',
+        capacity: data.capacity || '',
+        is_operational: data.is_operational !== undefined ? data.is_operational : true,
+        contact_person: data.contact_person || '',
+        contact_phone: data.contact_phone || '',
+        is_approved: data.is_approved !== undefined ? data.is_approved : true,
+      });
+    } catch (error) {
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -90,183 +89,260 @@ export default function MapLayerForm() {
     }));
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-function LocationMarker() {
-  const [position, setPosition] = useState(null);
-  const map = useMapEvents({
-    click(e) {
-      setPosition(e.latlng);
-      setFormData(prev => ({
-        ...prev,
-        lat: e.latlng.lat.toFixed(6),
-        lng: e.latlng.lng.toFixed(6)
-      }));
-    },
-  });
+    try {
+      // Validate coordinates
+      if (!formData.lat || !formData.lng) {
+        setError('Latitude and longitude are required');
+        return;
+      }
 
-  return position === null ? null : (
-    <Marker position={position}>
-      <Popup>You clicked here</Popup>
-    </Marker>
-  );
-}
+      const coordinates = {
+        lat: parseFloat(formData.lat),
+        lng: parseFloat(formData.lng)
+      };
+
+      if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
+        setError('Latitude and longitude must be valid numbers');
+        return;
+      }
+
+      let result;
+      if (isEditing) {
+        result = await supabase
+          .from('locations')
+          .update({
+            ...formData,
+            lat: coordinates.lat,
+            lng: coordinates.lng,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', locationId);
+      } else {
+        result = await supabase
+          .from('locations')
+          .insert([{
+            ...formData,
+            lat: coordinates.lat,
+            lng: coordinates.lng,
+            created_by: user.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }]);
+      }
+
+      if (result.error) throw result.error;
+
+      // Navigate back to admin dashboard
+      navigate('/admin');
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user?.is_admin) {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Header 
-        title={id ? "EDIT LOCATION" : "ADD NEW LOCATION"} 
-        showBack={true} 
-        onBack={() => navigate('/admin')} 
+        title={isEditing ? "EDIT LOCATION" : "ADD NEW LOCATION"} 
+        showBack 
+        onBack={() => navigate('/admin')}
       />
       
       <div className="max-w-2xl mx-auto px-4 py-6">
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4">
             <p className="text-red-800">{error}</p>
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type *
-            </label>
-            <select
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select type</option>
-              <option value="evacuation_center">Evacuation Center</option>
-              <option value="hospital">Hospital</option>
-              <option value="police_station">Police Station</option>
-              <option value="fire_station">Fire Station</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter name"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Address *
-            </label>
-            <textarea
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              required
-              rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter address"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Latitude
-              </label>
-              <input
-                type="number"
-                step="any"
+              <Label htmlFor="name">Location Name</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                placeholder="Name of the facility"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="type">Location Type</Label>
+              <select
+                id="type"
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="evacuation center">Evacuation Center</option>
+                <option value="health facility">Health Facility</option>
+                <option value="fire station">Fire Station</option>
+                <option value="police station">Police Station</option>
+                <option value="school">School</option>
+                <option value="barangay hall">Barangay Hall</option>
+                <option value="market">Market</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            
+            <div className="md:col-span-2">
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Full address of the location"
+                rows={3}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="lat">Latitude</Label>
+              <Input
+                id="lat"
                 name="lat"
+                type="text"
                 value={formData.lat}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Latitude"
+                required
+                placeholder="e.g., 14.5995"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Longitude
-              </label>
-              <input
-                type="number"
-                step="any"
+              <Label htmlFor="lng">Longitude</Label>
+              <Input
+                id="lng"
                 name="lng"
+                type="text"
                 value={formData.lng}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Longitude"
+                required
+                placeholder="e.g., 120.9842"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="hotline">Hotline</Label>
+              <Input
+                id="hotline"
+                name="hotline"
+                type="tel"
+                value={formData.hotline}
+                onChange={handleChange}
+                placeholder="Emergency contact number"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="contact_person">Contact Person</Label>
+              <Input
+                id="contact_person"
+                name="contact_person"
+                value={formData.contact_person}
+                onChange={handleChange}
+                placeholder="Person in charge"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="contact_phone">Contact Phone</Label>
+              <Input
+                id="contact_phone"
+                name="contact_phone"
+                type="tel"
+                value={formData.contact_phone}
+                onChange={handleChange}
+                placeholder="Contact number"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="capacity">Capacity</Label>
+              <Input
+                id="capacity"
+                name="capacity"
+                type="number"
+                value={formData.capacity}
+                onChange={handleChange}
+                placeholder="Capacity (if applicable)"
               />
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Capacity
-            </label>
-            <input
-              type="number"
-              name="capacity"
-              value={formData.capacity}
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              name="description"
+              value={formData.description}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter capacity"
+              placeholder="Additional information about this location"
+              rows={4}
             />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Hotline
-            </label>
-            <input
-              type="text"
-              name="hotline"
-              value={formData.hotline}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter hotline number"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Location on Map
-            </label>
-            <div className="h-64 w-full border border-gray-300 rounded-md overflow-hidden">
-              <MapContainer center={[13.0293, 123.445]} zoom={10} style={{ height: '100%', width: '100%' }}>
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                <LocationMarker />
-              </MapContainer>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="is_operational"
+                name="is_operational"
+                checked={formData.is_operational}
+                onChange={handleChange}
+                className="h-4 w-4 text-blue-950 rounded border-gray-300 focus:ring-blue-950"
+              />
+              <Label htmlFor="is_operational" className="ml-2">
+                Is operational
+              </Label>
+            </div>
+            
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="is_approved"
+                name="is_approved"
+                checked={formData.is_approved}
+                onChange={handleChange}
+                className="h-4 w-4 text-blue-950 rounded border-gray-300 focus:ring-blue-950"
+              />
+              <Label htmlFor="is_approved" className="ml-2">
+                Is approved
+              </Label>
             </div>
           </div>
-
-          <div className="flex gap-4">
-            <button
-              type="submit"
+          
+          <div className="flex gap-4 pt-4">
+            <Button 
+              type="submit" 
               disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="bg-blue-950 hover:bg-blue-800 text-white"
             >
-              {loading ? 'Saving...' : (id ? 'Update Location' : 'Add Location')}
-            </button>
+              {loading ? 'Saving...' : isEditing ? 'Update Location' : 'Add Location'}
+            </Button>
             
-            <button
-              type="button"
+            <Button 
+              type="button" 
+              variant="outline"
               onClick={() => navigate('/admin')}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </div>

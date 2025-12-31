@@ -118,9 +118,8 @@ export default function AdminDashboard() {
     }
   };
 
-
-  const handleDeleteLayer = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this map layer?')) return;
+  const handleDeleteLocation = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this location?')) return;
     
     try {
       const { error } = await supabase
@@ -166,7 +165,7 @@ export default function AdminDashboard() {
             {[
               { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
               { id: 'typhoons', label: 'Typhoons', icon: Cloud },
-              { id: 'locations', label: 'Locations', icon: Map },
+              { id: 'locations', label: 'Map Layers', icon: Map },
               { id: 'users', label: 'Users', icon: Users },
               { id: 'database', label: 'Database', icon: Database }
             ].map((tab) => (
@@ -362,6 +361,35 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Typhoon Tracking Visualization */}
+                <div className="px-6 py-4 border-t border-blue-950/10">
+                  <h3 className="text-md font-semibold text-blue-950 mb-3">Typhoon Tracking Map</h3>
+                  <div className="bg-gray-100 rounded-lg p-4 h-64 flex items-center justify-center">
+                    <p className="text-gray-600">Interactive typhoon tracking map would be displayed here</p>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h4 className="font-medium text-blue-950 mb-2">Recent Typhoon Data Points</h4>
+                    {typhoons.length > 0 && (
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        {typhoons[0].typhoon_data_points && typhoons[0].typhoon_data_points.length > 0 ? (
+                          <ul className="space-y-2">
+                            {typhoons[0].typhoon_data_points.slice(0, 5).map((point, idx) => (
+                              <li key={idx} className="text-sm text-blue-950/80 border-b border-blue-950/10 pb-2 last:border-0 last:pb-0">
+                                <span className="font-medium">Location:</span> {point.location || 'N/A'} | 
+                                <span className="font-medium"> Wind Speed:</span> {point.wind_speed || 'N/A'} km/h | 
+                                <span className="font-medium"> Pressure:</span> {point.pressure || 'N/A'} hPa
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-blue-950/60">No recent data points available</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -369,7 +397,7 @@ export default function AdminDashboard() {
             {activeTab === 'locations' && (
               <div>
                 <div className="px-6 py-4 border-b border-blue-950/10 flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-blue-950">Location Management</h2>
+                  <h2 className="text-lg font-semibold text-blue-950">Map Layer Management</h2>
                   <button
                     onClick={() => navigate('/admin/locations/new')}
                     className="bg-blue-950 text-white px-4 py-2 rounded-lg hover:bg-blue-800 flex items-center gap-2"
@@ -436,6 +464,36 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+                
+                {/* Map Layer Visualization */}
+                <div className="px-6 py-4 border-t border-blue-950/10">
+                  <h3 className="text-md font-semibold text-blue-950 mb-3">Map Layer Visualization</h3>
+                  <div className="bg-gray-100 rounded-lg p-4 h-64 flex items-center justify-center">
+                    <p className="text-gray-600">Interactive map showing all facility locations would be displayed here</p>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h4 className="font-medium text-blue-950 mb-2">Location Statistics</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-950">{locations.length}</p>
+                        <p className="text-sm text-blue-950/80">Total Locations</p>
+                      </div>
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-950">
+                          {locations.filter(loc => loc.type === 'evacuation center').length}
+                        </p>
+                        <p className="text-sm text-blue-950/80">Evacuation Centers</p>
+                      </div>
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-950">
+                          {locations.filter(loc => loc.type === 'health facility').length}
+                        </p>
+                        <p className="text-sm text-blue-950/80">Health Facilities</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

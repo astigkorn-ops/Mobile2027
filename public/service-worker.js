@@ -238,19 +238,44 @@ self.addEventListener('push', (event) => {
   
   if (event.data) {
     const payload = event.data.json();
+    
+    // Handle typhoon alerts and signal warnings specifically
+    let title = payload.title || 'MDRRMO Alert';
+    let body = payload.body || 'New alert from MDRRMO';
+    let icon = '/logome.webp';
+    let tag = payload.tag || 'mdrrmo-alert';
+    let url = payload.url || '/';
+    
+    // Customize notification based on type
+    if (payload.type === 'typhoon-alert') {
+      title = payload.typhoonName ? `Typhoon ${payload.typhoonName} Alert` : 'Typhoon Alert';
+      body = payload.message || `Typhoon approaching your area. Expected landfall: ${payload.estimatedTime || 'TBD'}`;
+      tag = `typhoon-${payload.id || Date.now()}`;
+      url = `/typhoon/${payload.id || 'dashboard'}`;
+    } else if (payload.type === 'signal-warning') {
+      title = payload.signalLevel ? `Signal Warning ${payload.signalLevel}` : 'Signal Warning';
+      body = payload.message || `A new signal warning has been issued for your area`;
+      icon = getSignalIcon(payload.signalLevel);
+      tag = `signal-${payload.id || Date.now()}`;
+      url = `/typhoon/${payload.id || 'dashboard'}`;
+    }
+    
     const options = {
-      body: payload.body || 'New alert from MDRRMO',
-      icon: '/logome.webp',
+      body: body,
+      icon: icon,
       badge: '/logome.webp',
       vibrate: [100, 50, 100],
+      tag: tag,
       data: {
         dateOfArrival: Date.now(),
-        primaryKey: payload.url || '/'
+        primaryKey: url,
+        type: payload.type,
+        payload: payload
       }
     };
     
     event.waitUntil(
-      self.registration.showNotification(payload.title || 'MDRRMO Alert', options)
+      self.registration.showNotification(title, options)
     );
   }
 });
@@ -265,6 +290,26 @@ self.addEventListener('notificationclick', (event) => {
     clients.openWindow(event.notification.data?.primaryKey || '/')
   );
 });
+
+// Helper function to get appropriate icon based on signal level
+function getSignalIcon(signalLevel) {
+  if (!signalLevel) return '/logome.webp';
+  
+  // Return different icons based on signal level
+  switch (signalLevel) {
+    case '1':
+      return '/p1.jpeg'; // Low severity
+    case '2':
+      return '/p2.jpeg'; // Medium severity
+    case '3':
+      return '/p3.jpeg'; // High severity
+    case '4':
+    case '5':
+      return '/p4.jpeg'; // Very high severity
+    default:
+      return '/logome.webp';
+  }
+}
 
 // Queue an incident for later synchronization
 async function queueIncidentRequest(request) {
@@ -466,5 +511,52 @@ self.addEventListener('message', (event) => {
     event.waitUntil(
       syncQueuedIncidents()
     );
+  }
+  
+  // Handle push notification requests from client
+  if (event.data && event.data.type === 'SEND_PUSH_NOTIFICATION') {
+    // This is for when the client wants to trigger a notification manually
+    // In a real app, this would come from a server push notification
+    // For development/testing, we can trigger a notification directly
+    console.log('[SW] Client requested to send push notification:', event.data.payload);
+    
+    // For this to work in a real environment, we'd need the client to have permission
+    // to trigger push notifications, which typically only happens from a server
+    // For testing purposes, we can show a notification directly
+    const payload = event.data.payload;
+    
+    let title = payload.title || 'MDRRMO Alert';
+    let body = payload.body || 'New alert from MDRRMO';
+    let icon = '/logome.webp';
+    let tag = payload.tag || 'mdrrmo-alert';
+    let url = payload.url || '/';
+    
+    // Customize notification based on type
+    if (payload.type === 'typhoon-alert') {
+      title = payload.typhoonName ? `Typhoon ${payload.typhoonName} Alert` : 'Typhoon Alert';
+      body = payload.message || `Typhoon approaching your area. Expected landfall: ${payload.estimatedTime || 'TBD'}`;
+      tag = `typhoon-${payload.id || Date.now()}`;
+      url = `/typhoon/${payload.id || 'dashboard'}`;
+    } else if (payload.type === 'signal-warning') {
+      title = payload.signalLevel ? `Signal Warning ${payload.signalLevel}` : 'Signal Warning';
+      body = payload.message || `A new signal warning has been issued for your area`;
+      icon = getSignalIcon(payload.signalLevel);
+      tag = `signal-${payload.id || Date.now()}`;
+      url = `/typhoon/${payload.id || 'dashboard'}`;
+    }
+    
+    self.registration.showNotification(title, {
+      body: body,
+      icon: icon,
+      badge: '/logome.webp',
+      vibrate: [100, 50, 100],
+      tag: tag,
+      data: {
+        dateOfArrival: Date.now(),
+        primaryKey: url,
+        type: payload.type,
+        payload: payload
+      }
+    });
   }
 });

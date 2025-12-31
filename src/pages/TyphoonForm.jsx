@@ -2,76 +2,84 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { supabase } from '../lib/supabase';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
+import { getSupabaseClient } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function TyphoonForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { user } = useAuth();
+  const { id: typhoonId } = useParams();
+  
+  // 获取 Supabase 客户端实例
+  const supabase = getSupabaseClient();
+  
   const [formData, setFormData] = useState({
     name: '',
     local_name: '',
-    international_name: '',
-    season: new Date().getFullYear(),
+    season: '',
     is_active: true,
-    as_of: '',
-    coordinates: '',
     current_location: '',
     signal_number: '',
-    max_wind_speed: '',
-    movement: '',
     intensity: '',
-    central_pressure: ''
+    description: '',
+    wind_speed: '',
+    pressure: '',
+    forecast_movement: '',
+    estimated_landfall: '',
+    advisory_text: '',
   });
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    if (!user?.is_admin) {
+      navigate('/dashboard');
+      return;
+    }
+
+    if (typhoonId) {
+      setIsEditing(true);
       fetchTyphoon();
     }
-  }, [id]);
+  }, [user, navigate, typhoonId]);
 
   const fetchTyphoon = async () => {
     try {
       setLoading(true);
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+      
       const { data, error } = await supabase
         .from('typhoons')
         .select('*')
-        .eq('id', id)
+        .eq('id', typhoonId)
         .single();
-      
-      if (error) throw error;
-      setFormData(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      let result;
-      
-      if (id) {
-        // Update existing typhoon
-        result = await supabase
-          .from('typhoons')
-          .update(formData)
-          .eq('id', id);
-      } else {
-        // Create new typhoon
-        result = await supabase
-          .from('typhoons')
-          .insert([formData]);
-      }
-      
-      if (result.error) throw result.error;
-      navigate('/admin');
-    } catch (err) {
-      setError(err.message);
+      if (error) throw error;
+      setFormData({
+        name: data.name || '',
+        local_name: data.local_name || '',
+        season: data.season || '',
+        is_active: data.is_active,
+        current_location: data.current_location || '',
+        signal_number: data.signal_number || '',
+        intensity: data.intensity || '',
+        description: data.description || '',
+        wind_speed: data.wind_speed || '',
+        pressure: data.pressure || '',
+        forecast_movement: data.forecast_movement || '',
+        estimated_landfall: data.estimated_landfall || '',
+        advisory_text: data.advisory_text || '',
+      });
+    } catch (error) {
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -85,195 +93,248 @@ export default function TyphoonForm() {
     }));
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+      
+      let result;
+      if (isEditing) {
+        result = await supabase
+          .from('typhoons')
+          .update({
+            ...formData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', typhoonId);
+      } else {
+        result = await supabase
+          .from('typhoons')
+          .insert([{
+            ...formData,
+            created_by: user.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }]);
+      }
+
+      if (result.error) throw result.error;
+
+      // Navigate back to admin dashboard
+      navigate('/admin');
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user?.is_admin) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Header 
-        title={id ? "EDIT TYPHOON" : "CREATE NEW TYPHOON"} 
-        showBack={true} 
-        onBack={() => navigate('/admin')} 
+        title={isEditing ? "EDIT TYPHOON" : "ADD NEW TYPHOON"} 
+        showBack 
+        onBack={() => navigate('/admin')}
       />
       
       <div className="max-w-2xl mx-auto px-4 py-6">
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4">
             <p className="text-red-800">{error}</p>
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
-          {/* Operational fields */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="name">Typhoon Name (International)</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                placeholder="International name"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="local_name">Local Name</Label>
+              <Input
+                id="local_name"
+                name="local_name"
+                value={formData.local_name}
+                onChange={handleChange}
+                placeholder="Local name (if applicable)"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="season">Season</Label>
+              <Input
+                id="season"
+                name="season"
+                value={formData.season}
+                onChange={handleChange}
+                required
+                placeholder="e.g., 2025"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="signal_number">Signal Number</Label>
+              <Input
+                id="signal_number"
+                name="signal_number"
+                type="number"
+                min="1"
+                max="5"
+                value={formData.signal_number}
+                onChange={handleChange}
+                placeholder="1-5"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="current_location">Current Location</Label>
+              <Input
+                id="current_location"
+                name="current_location"
+                value={formData.current_location}
+                onChange={handleChange}
+                placeholder="e.g., 300km East of Manila"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="intensity">Intensity</Label>
+              <select
+                id="intensity"
+                name="intensity"
+                value={formData.intensity}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Select intensity</option>
+                <option value="tropical depression">Tropical Depression</option>
+                <option value="tropical storm">Tropical Storm</option>
+                <option value="severe tropical storm">Severe Tropical Storm</option>
+                <option value="typhoon">Typhoon</option>
+                <option value="super typhoon">Super Typhoon</option>
+              </select>
+            </div>
+            
+            <div>
+              <Label htmlFor="wind_speed">Wind Speed (km/h)</Label>
+              <Input
+                id="wind_speed"
+                name="wind_speed"
+                type="number"
+                value={formData.wind_speed}
+                onChange={handleChange}
+                placeholder="Maximum sustained winds"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="pressure">Pressure (hPa)</Label>
+              <Input
+                id="pressure"
+                name="pressure"
+                type="number"
+                step="0.1"
+                value={formData.pressure}
+                onChange={handleChange}
+                placeholder="Central pressure"
+              />
+            </div>
+            
+            <div className="md:col-span-2">
+              <Label htmlFor="forecast_movement">Forecast Movement</Label>
+              <Input
+                id="forecast_movement"
+                name="forecast_movement"
+                value={formData.forecast_movement}
+                onChange={handleChange}
+                placeholder="e.g., West at 15 km/h"
+              />
+            </div>
+            
+            <div className="md:col-span-2">
+              <Label htmlFor="estimated_landfall">Estimated Landfall</Label>
+              <Input
+                id="estimated_landfall"
+                name="estimated_landfall"
+                type="datetime-local"
+                value={formData.estimated_landfall}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              International Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              name="description"
+              value={formData.description}
               onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter international name"
+              placeholder="Detailed description of the typhoon"
+              rows={4}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Local Name
-            </label>
-            <input
-              type="text"
-              name="local_name"
-              value={formData.local_name}
+            <Label htmlFor="advisory_text">Advisory Text</Label>
+            <Textarea
+              id="advisory_text"
+              name="advisory_text"
+              value={formData.advisory_text}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter local name"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Season *
-            </label>
-            <input
-              type="number"
-              name="season"
-              value={formData.season}
-              onChange={handleChange}
-              required
-              min="1900"
-              max="2100"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter season year"
+              placeholder="Official advisory text for the public"
+              rows={6}
             />
           </div>
           
           <div className="flex items-center">
             <input
               type="checkbox"
+              id="is_active"
               name="is_active"
               checked={formData.is_active}
               onChange={handleChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-950 rounded border-gray-300 focus:ring-blue-950"
             />
-            <label className="ml-2 block text-sm text-gray-900">
-              Active Typhoon
-            </label>
-          </div>
-
-          {/* New fields */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">As of</label>
-            <input
-              type="text"
-              name="as_of"
-              value={formData.as_of}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., 2025-01-05 14:00 PHT"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Coordinates</label>
-            <input
-              type="text"
-              name="coordinates"
-              value={formData.coordinates}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., 14.6N, 122.3E"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Current Location</label>
-            <input
-              type="text"
-              name="current_location"
-              value={formData.current_location}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., 230 km East of Virac, Catanduanes"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Typhoon Signal #</label>
-            <input
-              type="text"
-              name="signal_number"
-              value={formData.signal_number}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., 2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Max Wind Speed</label>
-            <input
-              type="text"
-              name="max_wind_speed"
-              value={formData.max_wind_speed}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., 120 km/h"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Movement</label>
-            <input
-              type="text"
-              name="movement"
-              value={formData.movement}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., WNW at 15 km/h"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Intensity</label>
-            <input
-              type="text"
-              name="intensity"
-              value={formData.intensity}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Maintaining strength / Weakening / Intensifying"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Central Pressure</label>
-            <input
-              type="text"
-              name="central_pressure"
-              value={formData.central_pressure}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., 960 hPa"
-            />
+            <Label htmlFor="is_active" className="ml-2">
+              Typhoon is currently active
+            </Label>
           </div>
           
-          <div className="flex gap-4">
-            <button
-              type="submit"
+          <div className="flex gap-4 pt-4">
+            <Button 
+              type="submit" 
               disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="bg-blue-950 hover:bg-blue-800 text-white"
             >
-              {loading ? 'Saving...' : (id ? 'Update Typhoon' : 'Create Typhoon')}
-            </button>
+              {loading ? 'Saving...' : isEditing ? 'Update Typhoon' : 'Create Typhoon'}
+            </Button>
             
-            <button
-              type="button"
+            <Button 
+              type="button" 
+              variant="outline"
               onClick={() => navigate('/admin')}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </div>

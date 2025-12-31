@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 // Create a single instance of the Supabase client
 let supabaseInstance = null;
 
-export const createClient = () => {
+export const getSupabaseClient = () => {
   if (supabaseInstance) {
     return supabaseInstance;
   }
@@ -21,4 +21,4 @@ export const createClient = () => {
   return supabaseInstance;
 };
 
-export default createClient;
+export default getSupabaseClient;

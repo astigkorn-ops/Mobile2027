@@ -1,187 +1,207 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Header } from '../components/Header';
-import { AlertTriangle, Cloud, Gauge, History, MapPin, Navigation, RefreshCw, Wind } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
-const mockTyphoonData = {
-  name: 'Typhoon CARINA',
-  localName: 'Gaemi',
-  position: '15.2°N, 120.5°E',
-  maxWindSpeed: '185 km/h',
-  movement: 'West at 15 km/h',
-  intensity: 'Severe Tropical Storm',
-  pressure: '960 hPa',
-  lastUpdate: new Date().toLocaleString('en-PH', { 
-    timeZone: 'Asia/Manila',
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  }),
-  forecast: [
-    { time: '24h', position: '16.0°N, 119.0°E', intensity: 'Typhoon' },
-    { time: '48h', position: '17.5°N, 117.5°E', intensity: 'Typhoon' },
-    { time: '72h', position: '19.0°N, 116.0°E', intensity: 'Severe Tropical Storm' },
-  ],
-};
+const TyphoonDashboard = () => {
+  const [typhoonData, setTyphoonData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-export default function TyphoonDashboard() {
-  const navigate = useNavigate();
-  const [typhoonData, setTyphoonData] = useState(mockTyphoonData);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  useEffect(() => {
+    fetchTyphoonData();
+  }, []);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setTyphoonData({
-        ...mockTyphoonData,
-        lastUpdate: new Date().toLocaleString('en-PH', {
-          timeZone: 'Asia/Manila',
-          dateStyle: 'medium',
-          timeStyle: 'short'
-        }),
-      });
-      setIsRefreshing(false);
-    }, 1500);
+  const fetchTyphoonData = async () => {
+    try {
+      setLoading(true);
+      // In a real app, this would fetch from an API
+      // For now, we'll simulate data
+      const mockData = {
+        id: 'typhoon-2027',
+        name: 'Typhoon Agaton',
+        signalLevel: '3',
+        location: '150 km East of Manila',
+        maxWindSpeed: 185,
+        movement: 'West at 15 kph',
+        estimatedLandfall: '2025-01-15 14:00:00',
+        status: 'approaching',
+        updatedAt: new Date().toISOString(),
+      };
+      
+      setTyphoonData(mockData);
+      
+      // Check if we need to send a notification
+      if (shouldSendNotification(mockData)) {
+        sendTyphoonNotification(mockData);
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching typhoon data:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Function to determine if a notification should be sent
+  const shouldSendNotification = (data) => {
+    // Check if this is a new significant update compared to last notification
+    const lastNotification = localStorage.getItem('lastTyphoonNotification');
+    if (!lastNotification) return true;
+    
+    const lastData = JSON.parse(lastNotification);
+    // Send notification if signal level increased or new typhoon
+    return data.signalLevel > lastData.signalLevel || data.id !== lastData.id;
+  };
+
+  // Function to send typhoon notification
+  const sendTyphoonNotification = (data) => {
+    // Store this notification to avoid duplicates
+    localStorage.setItem('lastTyphoonNotification', JSON.stringify(data));
+    
+    // Send notification to service worker if available
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.active?.postMessage({
+          type: 'SEND_PUSH_NOTIFICATION',
+          payload: {
+            type: 'typhoon-alert',
+            title: `Typhoon ${data.name} Alert`,
+            body: `Signal #${data.signalLevel} issued. Expected landfall: ${new Date(data.estimatedLandfall).toLocaleString()}`,
+            tag: `typhoon-${data.id}`,
+            url: '/typhoon-dashboard',
+            typhoonName: data.name,
+            signalLevel: data.signalLevel,
+            estimatedTime: data.estimatedLandfall,
+            id: data.id,
+            message: `Signal #${data.signalLevel} issued for Typhoon ${data.name}. Expected landfall: ${new Date(data.estimatedLandfall).toLocaleString()}`
+          }
+        });
+      });
+    }
+  };
+
+  // Function to send signal warning notification
+  const sendSignalWarning = (signalLevel, message) => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.active?.postMessage({
+          type: 'SEND_PUSH_NOTIFICATION',
+          payload: {
+            type: 'signal-warning',
+            title: `Signal Warning ${signalLevel}`,
+            body: message,
+            tag: `signal-${signalLevel}-${Date.now()}`,
+            url: '/typhoon-dashboard',
+            signalLevel: signalLevel,
+            message: message
+          }
+        });
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg">Loading typhoon data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 bg-red-50 text-red-700 rounded-lg">
+        <h2 className="text-xl font-bold">Error</h2>
+        <p>{error}</p>
+        <Button onClick={fetchTyphoonData} className="mt-4">
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative min-h-screen bg-white">
-      {/* Animated pattern overlay */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}></div>
-      </div>
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Typhoon Dashboard</h1>
       
-      {/* Animated elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-950/5 rounded-full animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-yellow-500/5 rounded-full animate-bounce"></div>
-        <div className="absolute bottom-20 left-1/4 w-20 h-20 bg-blue-950/5 rounded-full animate-ping"></div>
-      </div>
-
-      <div className="relative z-10">
-        <Header title="TYPHOON DASHBOARD" showBack icon={Cloud} />
-        
-        <main className="px-4 py-6 max-w-2xl mx-auto space-y-6">
-          {/* Monitoring Alert */}
-          <div className="relative bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-200 rounded-xl p-4 flex items-center gap-3 shadow-lg" data-testid="typhoon-alert">
-            <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-100/10 rounded-xl"></div>
-            <div className="relative z-10">
-              <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
-            </div>
-            <div className="relative z-10">
-              <h2 className="text-blue-950 font-bold text-lg">TYPHOON MONITORING</h2>
-              <p className="text-blue-950/70 text-sm">Active weather disturbance detected</p>
-            </div>
-          </div>
-
-          {/* Satellite Image */}
-          <div className="satellite-container bg-white border-2 border-blue-950/20 rounded-xl overflow-hidden shadow-lg" data-testid="satellite-container">
-            <div className="p-3 bg-gradient-to-r from-blue-950 to-blue-800 border-b flex items-center justify-between">
-              <span className="text-white font-semibold text-sm">Live Update Himawari-8 Satellite Image</span>
-              <button
-                onClick={handleRefresh}
-                className={`p-2 rounded-full hover:bg-blue-800 transition-colors ${isRefreshing ? 'animate-spin' : ''}`}
-                data-testid="refresh-btn"
+      {typhoonData && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex justify-between items-center">
+              <span>Typhoon {typhoonData.name}</span>
+              <Badge 
+                variant={typhoonData.signalLevel >= 4 ? "destructive" : typhoonData.signalLevel === 3 ? "default" : "secondary"}
+                className="text-lg py-1 px-3"
               >
-                <RefreshCw className="w-4 h-4 text-white" />
-              </button>
-            </div>
-            <div className="relative">
-              <img
-                src="https://src.meteopilipinas.gov.ph/repo/mtsat-colored/24hour/latest-him-colored.gif"
-                alt="Himawari-8 Satellite Image"
-                className="w-full h-auto"
-                data-testid="satellite-image"
-              />
-              {/* Philippines boundary overlay indicator */}
-              <div className="absolute top-4 left-4 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                Philippine Area of Responsibility
+                Signal {typhoonData.signalLevel}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-semibold">Location</h3>
+                <p>{typhoonData.location}</p>
+              </div>
+              <div>
+                <h3 className="font-semibold">Max Wind Speed</h3>
+                <p>{typhoonData.maxWindSpeed} km/h</p>
+              </div>
+              <div>
+                <h3 className="font-semibold">Movement</h3>
+                <p>{typhoonData.movement}</p>
+              </div>
+              <div>
+                <h3 className="font-semibold">Estimated Landfall</h3>
+                <p>{new Date(typhoonData.estimatedLandfall).toLocaleString()}</p>
               </div>
             </div>
-          </div>
-
-          {/* Typhoon Tracking */}
-          <div className="bg-white border-2 border-blue-950/20 rounded-xl overflow-hidden shadow-lg" data-testid="typhoon-tracking">
-            <div className="p-4 bg-gradient-to-r from-yellow-500 to-yellow-400 border-b border-yellow-200">
-              <h3 className="text-blue-950 font-bold text-lg">Typhoon Tracking</h3>
-             
-            </div>
             
-            <div className="divide-y divide-blue-950/10">
-              <InfoRow 
-                label="Typhoon Name" 
-                value={`${typhoonData.name} (${typhoonData.localName})`}
-                highlight={true}
-              />
-              <InfoRow label="As of" value="03:00 AM, Dec 31, 2025" />
-              <InfoRow label="Coordinates" value={typhoonData.position} />
-              <InfoRow label="Current Location" value="East of Luzon" />
-              <InfoRow label="Typhoon Signal #" value="3" />
-              <InfoRow label="Max Wind Speed" value={typhoonData.maxWindSpeed} icon={Wind} />
-              <InfoRow label="Movement" value={typhoonData.movement} icon={Navigation} />
-              <InfoRow label="Intensity" value={typhoonData.intensity} icon={Gauge} highlight={true} />
-              <InfoRow label="Central Pressure" value={typhoonData.pressure} />
+            <div className="mt-4">
+              <Button onClick={() => sendSignalWarning('4', 'New signal level 4 warning issued for upcoming typhoon')}>
+                Test Signal Warning
+              </Button>
             </div>
-          </div>
-
-          {/* Forecast Track */}
-          <div className="bg-white border-2 border-blue-950/20 rounded-xl overflow-hidden shadow-lg" data-testid="forecast-track">
-            <div className="p-4 bg-gradient-to-r from-blue-950 to-blue-800 border-b border-blue-200">
-              <h3 className="text-white font-bold text-lg">Forecast Track</h3>
-            </div>
-            
-            <div className="p-4 space-y-3">
-              {typhoonData.forecast.map((point, index) => (
-                <div 
-                  key={point.time}
-                  className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-950/10"
-                  data-testid={`forecast-${point.time}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                      index === 0 ? 'bg-red-500' : index === 1 ? 'bg-orange-500' : 'bg-yellow-500'
-                    }`}>
-                      {point.time}
-                    </div>
-                    <span className="text-blue-950/70 text-sm">{point.position}</span>
-                  </div>
-                  <span className="text-blue-950 font-medium text-sm">{point.intensity}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Last Update */}
-          <p className="text-center text-blue-950/60 text-xs" data-testid="last-update">
-            Last updated: {typhoonData.lastUpdate}
-          </p>
-
-          {/* Historical Data Link */}
-          <button
-            onClick={() => navigate('/typhoon-history')}
-            className="w-full bg-gradient-to-r from-blue-950 to-blue-800 text-white font-semibold py-4 rounded-xl hover:from-blue-800 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
-            data-testid="view-history-btn"
-          >
-            <History className="w-5 h-5" />
-            <span>View Typhoon History & Analytics</span>
-          </button>
-        </main>
+          </CardContent>
+        </Card>
+      )}
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Preparedness Checklist</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>Secure loose outdoor objects</li>
+              <li>Prepare emergency kit</li>
+              <li>Check evacuation routes</li>
+              <li>Charge all devices</li>
+            </ul>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Evacuation Centers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>Nearest evacuation centers in your area</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Emergency Contacts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>Quick access to emergency numbers</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
-}
+};
 
-function InfoRow({ label, value, icon: Icon, highlight }) {
-  return (
-    <div className="flex items-center justify-between p-4 typhoon-info-card hover:bg-blue-50 transition-colors">
-      <div className="flex items-center gap-2">
-        {Icon && <Icon className="w-4 h-4 text-blue-950" />}
-        <span className="text-blue-950/70 text-sm">{label}</span>
-      </div>
-      <span className={`font-semibold text-sm ${highlight ? 'text-red-600' : 'text-blue-950'}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
+export default TyphoonDashboard;
