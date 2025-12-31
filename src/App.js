@@ -39,9 +39,9 @@ function AppContent() {
         <Route path="/admin/typhoons/new" element={<TyphoonForm />} />
         <Route path="/admin/typhoons/:id" element={<TyphoonForm />} />
         <Route path="/admin/typhoons/:id/edit" element={<TyphoonForm />} />
-        <Route path="/admin/map-layers/new" element={<MapLayerForm />} />
-        <Route path="/admin/map-layers/:id" element={<MapLayerForm />} />
-        <Route path="/admin/map-layers/:id/edit" element={<MapLayerForm />} />
+        <Route path="/admin/locations/new" element={<MapLayerForm />} />
+        <Route path="/admin/locations/:id" element={<MapLayerForm />} />
+        <Route path="/admin/locations/:id/edit" element={<MapLayerForm />} />
         <Route path="/geotag-camera" element={<GeotagCamera />} />
         <Route path="/hotlines" element={<HotlineNumbers />} />
         <Route path="/report-incident" element={<ReportIncident />} />

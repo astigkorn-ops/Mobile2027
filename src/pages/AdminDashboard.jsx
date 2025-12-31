@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('incidents');
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [typhoons, setTyphoons] = useState([]);
-  const [mapLayers, setMapLayers] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -45,8 +45,8 @@ export default function AdminDashboard() {
       fetchIncidents();
     } else if (activeTab === 'typhoons') {
       fetchTyphoons();
-    } else if (activeTab === 'map-layers') {
-      fetchMapLayers();
+    } else if (activeTab === 'locations') {
+      fetchLocations();
     }
   }, [user, navigate, activeTab]);
 
@@ -86,15 +86,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchMapLayers = async () => {
+  const fetchLocations = async () => {
     try {
       const { data, error } = await supabase
-        .from('map_layers')
+        .from('locations')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMapLayers(data);
+      setLocations(data);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -118,31 +118,18 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleApproveLayer = async (id) => {
-    try {
-      const { error } = await supabase
-        .from('map_layers')
-        .update({ is_approved: true })
-        .eq('id', id);
-      
-      if (error) throw error;
-      fetchMapLayers();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
 
   const handleDeleteLayer = async (id) => {
     if (!window.confirm('Are you sure you want to delete this map layer?')) return;
     
     try {
       const { error } = await supabase
-        .from('map_layers')
+        .from('locations')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
-      fetchMapLayers();
+      fetchLocations();
     } catch (err) {
       setError(err.message);
     }
@@ -179,7 +166,7 @@ export default function AdminDashboard() {
             {[
               { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
               { id: 'typhoons', label: 'Typhoons', icon: Cloud },
-              { id: 'map-layers', label: 'Map Layers', icon: Map },
+              { id: 'locations', label: 'Locations', icon: Map },
               { id: 'users', label: 'Users', icon: Users },
               { id: 'database', label: 'Database', icon: Database }
             ].map((tab) => (
@@ -311,6 +298,9 @@ export default function AdminDashboard() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Name</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Season</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Current Location</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Signal Number</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Intensity</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Last Updated</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Actions</th>
                       </tr>
@@ -328,12 +318,21 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              typhoon.is_active 
-                                ? 'bg-green-100 text-green-800' 
+                              typhoon.is_active
+                                ? 'bg-green-100 text-green-800'
                                 : 'bg-red-100 text-red-800'
                             }`}>
                               {typhoon.is_active ? 'Active' : 'Inactive'}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-950/80">
+                            {typhoon.current_location || '—'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-950/80">
+                            {typhoon.signal_number || '—'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-950/80">
+                            {typhoon.intensity || '—'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-950/80">
                             {new Date(typhoon.updated_at).toLocaleString()}
@@ -367,16 +366,16 @@ export default function AdminDashboard() {
             )}
 
             {/* Map Layers Tab */}
-            {activeTab === 'map-layers' && (
+            {activeTab === 'locations' && (
               <div>
                 <div className="px-6 py-4 border-b border-blue-950/10 flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-blue-950">Map Layer Management</h2>
+                  <h2 className="text-lg font-semibold text-blue-950">Location Management</h2>
                   <button
-                    onClick={() => navigate('/admin/map-layers/new')}
+                    onClick={() => navigate('/admin/locations/new')}
                     className="bg-blue-950 text-white px-4 py-2 rounded-lg hover:bg-blue-800 flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
-                    Add New Layer
+                    Add New Location
                   </button>
                 </div>
                 
@@ -386,68 +385,54 @@ export default function AdminDashboard() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Name</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Created</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Address</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Coordinates</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Hotline</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-950 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-blue-950/10">
-                      {mapLayers.map((layer) => (
-                        <tr key={layer.id} className="hover:bg-blue-50">
+                      {locations.map((location) => (
+                        <tr key={location.id} className="hover:bg-blue-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-blue-950">
-                              {layer.name}
+                              {location.name}
                             </div>
-                            <div className="text-sm text-blue-950/60">{layer.description}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-950/80">
-                            {layer.layer_type}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {layer.is_approved ? (
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                Approved
-                              </span>
-                            ) : (
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                Pending
-                              </span>
-                            )}
+                            {location.type}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-950/80">
-                            {new Date(layer.created_at).toLocaleString()}
+                            {location.address}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-950/80">
+  {location.lat && location.lng ? `${location.lat}, ${location.lng}` : '—'}
+</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-950/80">
+                            {location.hotline || '—'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {!layer.is_approved && (
-                              <>
-                                <button
-                                  onClick={() => handleApproveLayer(layer.id)}
-                                  className="text-green-600 hover:text-green-900 mr-3"
-                                >
-                                  <Check className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteLayer(layer.id)}
-                                  className="text-red-600 hover:text-red-900 mr-3"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
                             <button
-                              onClick={() => navigate(`/admin/map-layers/${layer.id}`)}
+                              onClick={() => navigate(`/admin/locations/${location.id}`)}
                               className="text-blue-600 hover:text-blue-900 mr-3"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => navigate(`/admin/map-layers/${layer.id}/edit`)}
-                              className="text-green-600 hover:text-green-900"
+                              onClick={() => navigate(`/admin/locations/${location.id}/edit`)}
+                              className="text-green-600 hover:text-green-900 mr-3"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
+                            <button
+                              onClick={() => handleDeleteLocation(location.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </td>
                         </tr>
+
                       ))}
                     </tbody>
                   </table>
