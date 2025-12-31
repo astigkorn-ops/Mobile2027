@@ -1,5 +1,5 @@
 // src/pages/TyphoonForm.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Button } from '../components/ui/button';
@@ -47,9 +47,9 @@ export default function TyphoonForm() {
       setIsEditing(true);
       fetchTyphoon();
     }
-  }, [user, navigate, typhoonId]);
+  }, [user, navigate, typhoonId, fetchTyphoon]);
 
-  const fetchTyphoon = async () => {
+  const fetchTyphoon = useCallback(async () => {
     try {
       setLoading(true);
       if (!supabase) {

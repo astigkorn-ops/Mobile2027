@@ -1,5 +1,5 @@
 // src/pages/MapLayerForm.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Button } from '../components/ui/button';
@@ -13,6 +13,9 @@ export default function MapLayerForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { id: locationId } = useParams();
+
+  // 获取 Supabase 客户端实例
+  const supabase = getSupabaseClient();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -33,26 +36,13 @@ export default function MapLayerForm() {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    if (!user?.is_admin) {
-      navigate('/dashboard');
-      return;
-    }
-
-    if (locationId) {
-      setIsEditing(true);
-      fetchLocation();
-    }
-  }, [user, navigate, locationId]);
-
-  const fetchLocation = async () => {
+  const fetchLocation = useCallback(async () => {
     try {
       setLoading(true);
-      const supabase = getSupabaseClient();
       if (!supabase) {
         throw new Error('Supabase client not initialized');
       }
-      
+
       const { data, error } = await supabase
         .from('locations')
         .select('*')
@@ -79,7 +69,19 @@ export default function MapLayerForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [locationId, supabase]);
+
+  useEffect(() => {
+    if (!user?.is_admin) {
+      navigate('/dashboard');
+      return;
+    }
+
+    if (locationId) {
+      setIsEditing(true);
+      fetchLocation();
+    }
+  }, [user, navigate, locationId, fetchLocation]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

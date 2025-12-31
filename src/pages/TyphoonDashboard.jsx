@@ -8,11 +8,7 @@ const TyphoonDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchTyphoonData();
-  }, []);
-
-  const fetchTyphoonData = async () => {
+  const fetchTyphoonData = useCallback(async () => {
     try {
       setLoading(true);
       // In a real app, this would fetch from an API
@@ -28,9 +24,9 @@ const TyphoonDashboard = () => {
         status: 'approaching',
         updatedAt: new Date().toISOString(),
       };
-      
+
       setTyphoonData(mockData);
-      
+
       // Check if we need to send a notification
       if (shouldSendNotification(mockData)) {
         sendTyphoonNotification(mockData);
@@ -41,7 +37,11 @@ const TyphoonDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTyphoonData();
+  }, [fetchTyphoonData]);
 
   // Function to determine if a notification should be sent
   const shouldSendNotification = (data) => {
