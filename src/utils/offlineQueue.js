@@ -8,6 +8,7 @@ class OfflineQueueManager {
   constructor() {
     this.db = null;
     this.listeners = [];
+    this.syncInProgress = false;
   }
 
   // Initialize the database
@@ -22,6 +23,7 @@ class OfflineQueueManager {
 
       request.onsuccess = () => {
         this.db = request.result;
+        console.log('[OfflineQueue] Database opened successfully');
         resolve(this.db);
       };
 
@@ -38,8 +40,9 @@ class OfflineQueueManager {
           // Create indexes
           objectStore.createIndex('timestamp', 'timestamp', { unique: false });
           objectStore.createIndex('synced', 'synced', { unique: false });
+          objectStore.createIndex('type', 'type', { unique: false });
           
-          }
+        }
       };
     });
   }
@@ -56,11 +59,15 @@ class OfflineQueueManager {
         data: incidentData,
         timestamp: new Date().toISOString(),
         synced: false,
+        type: 'incident',
+        attempts: 0,
+        lastAttempt: null,
       };
 
       const request = objectStore.add(incident);
 
       request.onsuccess = () => {
+        console.log('[OfflineQueue] Incident added to queue:', request.result);
         this.notifyListeners();
         
         // Register background sync if available
@@ -81,18 +88,26 @@ class OfflineQueueManager {
     });
   }
 
-  // Get all queued incidents
-  async getQueuedIncidents() {
+  // Get all queued items
+  async getQueuedItems(type = null) {
     if (!this.db) await this.init();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction([STORE_NAME], 'readonly');
       const objectStore = transaction.objectStore(STORE_NAME);
-      const request = objectStore.getAll();
+      let request;
+
+      if (type) {
+        // Get items by type
+        const index = objectStore.index('type');
+        request = index.getAll(IDBKeyRange.only(type));
+      } else {
+        request = objectStore.getAll();
+      }
 
       request.onsuccess = () => {
-        const incidents = request.result.filter(incident => !incident.synced);
-        resolve(incidents);
+        const items = request.result.filter(item => !item.synced);
+        resolve(items);
       };
 
       request.onerror = () => {
@@ -101,13 +116,18 @@ class OfflineQueueManager {
     });
   }
 
-  // Get count of queued incidents
-  async getQueueCount() {
-    const incidents = await this.getQueuedIncidents();
-    return incidents.length;
+  // Get all queued incidents
+  async getQueuedIncidents() {
+    return this.getQueuedItems('incident');
   }
 
-  // Mark incident as synced
+  // Get count of queued items
+  async getQueueCount(type = null) {
+    const items = await this.getQueuedItems(type);
+    return items.length;
+  }
+
+  // Mark item as synced
   async markAsSynced(id) {
     if (!this.db) await this.init();
 
@@ -117,19 +137,20 @@ class OfflineQueueManager {
       const getRequest = objectStore.get(id);
 
       getRequest.onsuccess = () => {
-        const incident = getRequest.result;
-        if (incident) {
-          incident.synced = true;
-          const updateRequest = objectStore.put(incident);
+        const item = getRequest.result;
+        if (item) {
+          item.synced = true;
+          const updateRequest = objectStore.put(item);
           
           updateRequest.onsuccess = () => {
+            console.log('[OfflineQueue] Item marked as synced:', id);
             this.notifyListeners();
             resolve();
           };
           
           updateRequest.onerror = () => reject(updateRequest.error);
         } else {
-          reject(new Error('Incident not found'));
+          reject(new Error('Item not found'));
         }
       };
 
@@ -137,8 +158,8 @@ class OfflineQueueManager {
     });
   }
 
-  // Delete synced incidents
-  async deleteSyncedIncidents() {
+  // Delete synced items
+  async deleteSyncedItems() {
     if (!this.db) await this.init();
 
     return new Promise((resolve, reject) => {
@@ -151,6 +172,7 @@ class OfflineQueueManager {
         const cursor = event.target.result;
         if (cursor) {
           objectStore.delete(cursor.primaryKey);
+          console.log('[OfflineQueue] Deleted synced item:', cursor.primaryKey);
           cursor.continue();
         } else {
           this.notifyListeners();
@@ -162,52 +184,139 @@ class OfflineQueueManager {
     });
   }
 
-  // Sync all queued incidents
-  async syncAll() {
-    const incidents = await this.getQueuedIncidents();
-    
-    const results = {
-      success: 0,
-      failed: 0,
-      errors: [],
-    };
+  // Add a generic item to queue
+  async addToQueue(data, type = 'generic') {
+    if (!this.db) await this.init();
 
-    for (const incident of incidents) {
-      try {
-        // Try to send incident to server
-        const response = await fetch('/api/incidents', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(incident.data),
-        });
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(STORE_NAME);
 
-        if (response.ok) {
-          await this.markAsSynced(incident.id);
-          results.success++;
-        } else {
-          results.failed++;
-          results.errors.push({
-            id: incident.id,
-            error: `Server responded with ${response.status}`,
+      const item = {
+        data: data,
+        timestamp: new Date().toISOString(),
+        synced: false,
+        type: type,
+        attempts: 0,
+        lastAttempt: null,
+      };
+
+      const request = objectStore.add(item);
+
+      request.onsuccess = () => {
+        console.log(`[OfflineQueue] ${type} item added to queue:`, request.result);
+        this.notifyListeners();
+        
+        // Register background sync if available
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+          navigator.serviceWorker.ready.then(registration => {
+            registration.sync.register('sync-incidents')
+              .catch(err => console.error('[OfflineQueue] Failed to register background sync:', err));
           });
         }
-      } catch (error) {
-        results.failed++;
-        results.errors.push({
-          id: incident.id,
-          error: error.message,
-        });
+        
+        resolve(request.result);
+      };
+
+      request.onerror = () => {
+        console.error(`[OfflineQueue] Failed to add ${type} item:`, request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  // Sync all queued items
+  async syncAll() {
+    if (this.syncInProgress) {
+      console.log('[OfflineQueue] Sync already in progress, skipping');
+      return { success: 0, failed: 0, errors: [] };
+    }
+
+    this.syncInProgress = true;
+    console.log('[OfflineQueue] Starting sync process');
+
+    try {
+      const items = await this.getQueuedItems();
+      
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [],
+      };
+
+      for (const item of items) {
+        try {
+          // Update attempt count and timestamp
+          const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+          const objectStore = transaction.objectStore(STORE_NAME);
+          const getRequest = objectStore.get(item.id);
+
+          getRequest.onsuccess = () => {
+            const updatedItem = getRequest.result;
+            updatedItem.attempts = (updatedItem.attempts || 0) + 1;
+            updatedItem.lastAttempt = new Date().toISOString();
+            objectStore.put(updatedItem);
+          };
+
+          // Try to send item to server based on type
+          let response;
+          if (item.type === 'incident') {
+            response = await fetch('/api/incidents', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(item.data),
+            });
+          } else {
+            // For other types, you can implement specific endpoints
+            console.warn(`[OfflineQueue] Unknown item type: ${item.type}, using generic endpoint`);
+            response = await fetch('/api/data', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(item.data),
+            });
+          }
+
+          if (response.ok) {
+            await this.markAsSynced(item.id);
+            results.success++;
+            console.log(`[OfflineQueue] Successfully synced ${item.type} item:`, item.id);
+          } else {
+            results.failed++;
+            console.error(`[OfflineQueue] Failed to sync ${item.type} item:`, item.id, response.status);
+            results.errors.push({
+              id: item.id,
+              type: item.type,
+              error: `Server responded with ${response.status}`,
+            });
+          }
+        } catch (error) {
+          results.failed++;
+          console.error(`[OfflineQueue] Network error syncing ${item.type} item:`, item.id, error);
+          results.errors.push({
+            id: item.id,
+            type: item.type,
+            error: error.message,
+          });
+        }
       }
-    }
 
-    // Clean up synced incidents
-    if (results.success > 0) {
-      await this.deleteSyncedIncidents();
-    }
+      // Clean up synced items
+      if (results.success > 0) {
+        await this.deleteSyncedItems();
+      }
 
-    return results;
+      console.log(`[OfflineQueue] Sync completed: ${results.success} success, ${results.failed} failed`);
+      return results;
+    } catch (error) {
+      console.error('[OfflineQueue] Sync process failed:', error);
+      return { success: 0, failed: 0, errors: [{ error: error.message }] };
+    } finally {
+      this.syncInProgress = false;
+    }
   }
 
   // Add listener for queue changes
@@ -227,6 +336,30 @@ class OfflineQueueManager {
     });
   }
 
+  // Sync when back online
+  async initSyncOnOnline() {
+    // Listen for online event
+    window.addEventListener('online', async () => {
+      console.log('[OfflineQueue] Online detected, starting sync in 5 seconds...');
+      // Delay to ensure connection is stable
+      setTimeout(() => {
+        this.syncAll().catch(err => {
+          console.error('[OfflineQueue] Error during online sync:', err);
+        });
+      }, 5000);
+    });
+
+    // Sync on startup if online
+    if (navigator.onLine) {
+      console.log('[OfflineQueue] Online at startup, starting sync...');
+      setTimeout(() => {
+        this.syncAll().catch(err => {
+          console.error('[OfflineQueue] Error during startup sync:', err);
+        });
+      }, 2000);
+    }
+  }
+
   // Clear all data (for testing)
   async clearAll() {
     if (!this.db) await this.init();
@@ -237,6 +370,7 @@ class OfflineQueueManager {
       const request = objectStore.clear();
 
       request.onsuccess = () => {
+        console.log('[OfflineQueue] All data cleared');
         this.notifyListeners();
         resolve();
       };

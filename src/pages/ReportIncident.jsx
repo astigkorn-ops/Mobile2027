@@ -4,6 +4,7 @@ import { AlertTriangle, Calendar, Clock, MapPin, Send, X, Camera, WifiOff, Phone
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import offlineQueue from '../utils/offlineQueue';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -50,6 +51,7 @@ export default function ReportIncident() {
   const [uploadedImages, setUploadedImages] = useState([]);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [submitting, setSubmitting] = useState(false);
+  const [queueCount, setQueueCount] = useState(0);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -177,9 +179,17 @@ export default function ReportIncident() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Listen for queue changes
+    const handleQueueChange = (count) => setQueueCount(count);
+    offlineQueue.addListener(handleQueueChange);
+
+    // Initialize queue count
+    offlineQueue.getQueueCount().then(setQueueCount);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      offlineQueue.removeListener(handleQueueChange);
     };
   }, []);
 
@@ -206,23 +216,55 @@ export default function ReportIncident() {
     };
 
     try {
-      const { supabase } = await import('../utils/supabase');
+      if (navigator.onLine) {
+        // Try to submit directly if online
+        const { supabase } = await import('../utils/supabase');
 
-      const { data, error } = await supabase
-        .from('incidents')
-        .insert([reportData]);
+        const { data, error } = await supabase
+          .from('incidents')
+          .insert([reportData]);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setSubmitted(true);
+        setSubmitted(true);
 
-      setTimeout(() => {
-        setSubmitted(false);
-        resetForm();
-      }, 3000);
+        setTimeout(() => {
+          setSubmitted(false);
+          resetForm();
+        }, 3000);
+      } else {
+        // Add to offline queue if offline
+        await offlineQueue.addIncident(reportData);
+        setSubmitted(true);
+        setErrorMessage('');
+        
+        setTimeout(() => {
+          setSubmitted(false);
+          resetForm();
+        }, 3000);
+      }
     } catch (error) {
       console.error('Failed to submit incident report:', error);
-      setErrorMessage('Failed to submit incident report. Please try again.');
+      
+      // If online but submission failed, try adding to offline queue anyway
+      if (navigator.onLine) {
+        try {
+          await offlineQueue.addIncident(reportData);
+          setSubmitted(true);
+          setErrorMessage('Report queued for submission when online.');
+          
+          setTimeout(() => {
+            setSubmitted(false);
+            resetForm();
+          }, 3000);
+        } catch (queueError) {
+          console.error('Failed to add to offline queue:', queueError);
+          setErrorMessage('Failed to submit incident report. Please try again.');
+        }
+      } else {
+        setErrorMessage('Failed to add to offline queue. Please try again.');
+      }
+      
       setTimeout(() => setErrorMessage(''), 4000);
     } finally {
       setSubmitting(false);
@@ -275,15 +317,42 @@ export default function ReportIncident() {
               </div>
             </div>
           )}
+          {errorMessage && (
+            <div className="mb-6 bg-gradient-to-r from-red-600 to-orange-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg animate-fadeIn" data-testid="error-message">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
+              <div>
+                <p className="font-semibold text-lg">
+                  {errorMessage}
+                </p>
+                <p className="text-sm opacity-90">
+                  Please try again shortly.
+                </p>
+              </div>
+            </div>
+          )}
           {submitted && (
             <div className={`mb-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg animate-fadeIn`} data-testid="success-message">
               <CheckCircle className="w-6 h-6 animate-pulse" />
               <div>
                 <p className="font-semibold text-lg">
-                  Report submitted successfully!
+                  {isOffline ? 'Report queued for submission!' : 'Report submitted successfully!'}
                 </p>
                 <p className="text-sm opacity-90">
-                  Thank you for helping keep our community safe
+                  {isOffline ? 'Your report will be sent when you are back online' : 'Thank you for helping keep our community safe'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isOffline && (
+            <div className="mb-6 bg-gradient-to-r from-yellow-500 to-orange-500 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg animate-fadeIn">
+              <WifiOff className="w-6 h-6" />
+              <div>
+                <p className="font-semibold text-lg">Offline Mode</p>
+                <p className="text-sm opacity-90">
+                  {queueCount > 0 
+                    ? `You have ${queueCount} report(s) waiting to sync when online` 
+                    : 'Reports will be queued for submission when you are back online'}
                 </p>
               </div>
             </div>

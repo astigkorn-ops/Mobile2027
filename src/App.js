@@ -60,6 +60,29 @@ function AppContent() {
 }
 
 function App() {
+  // Handle messages from service worker
+  React.useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'SYNC_COMPLETE') {
+        const { synced, failed } = event.data;
+        if (synced > 0) {
+          toast.success(`Synced ${synced} offline reports successfully!`);
+        }
+        if (failed > 0) {
+          toast.error(`Failed to sync ${failed} reports. They remain in the queue.`);
+        }
+      }
+    };
+
+    // Add message listener
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+
+    // Cleanup listener on unmount
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
   return (
     <BrowserRouter>
         <TyphoonAlertWatcher />

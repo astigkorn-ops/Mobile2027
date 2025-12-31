@@ -13,6 +13,9 @@ const STATIC_ASSETS = [
   '/p3.jpeg',
   '/p4.jpeg',
   '/p5.jpeg',
+  '/static/css/main.css',
+  '/static/js/main.js',
+  '/manifest.json',
 ];
 
 // API endpoints to cache
@@ -21,6 +24,8 @@ const API_ENDPOINTS = [
   '/api/resources',
   '/api/checklist',
   '/api/map/locations',
+  '/api/disaster-guidelines',
+  '/api/typhoon-data',
 ];
 
 // Install event - cache static assets
@@ -60,7 +65,26 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
+  // Handle incident submission with network-first strategy and offline queuing
+  if (request.method === 'POST' && url.pathname === '/api/incidents') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        // If fetch fails, queue the request for later sync and return success response
+        return queueIncidentRequest(request).then(() => {
+          return new Response(JSON.stringify({ queued: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }).catch(error => {
+          console.error('[SW] Failed to queue incident:', error);
+          return new Response('Failed to queue incident', { status: 500 });
+        });
+      })
+    );
+    return;
+  }
+
+  // Skip other non-GET requests
   if (request.method !== 'GET') {
     return;
   }
@@ -105,10 +129,39 @@ self.addEventListener('fetch', (event) => {
 
         return response;
       }).catch(() => {
-        // Network failed, return offline page
+        // Network failed, handle different types of requests
         if (request.destination === 'document') {
           return caches.match('/index.html');
         }
+        
+        // For API requests, return appropriate fallback
+        if (url.pathname.startsWith('/api/')) {
+          const isCriticalEndpoint = API_ENDPOINTS.some(endpoint => url.pathname.includes(endpoint));
+          if (isCriticalEndpoint) {
+            return new Response(
+              JSON.stringify({ 
+                offline: true, 
+                message: 'This data is not available offline. Please check your connection.',
+                data: [] // Provide empty data array for list endpoints
+              }),
+              { 
+                status: 503,
+                headers: { 'Content-Type': 'application/json' }
+              }
+            );
+          }
+        }
+        
+        // For images and other assets, return a placeholder or error
+        if (request.destination === 'image') {
+          return new Response(
+            JSON.stringify({ error: 'Image not available offline' }),
+            { status: 503 }
+          );
+        }
+        
+        // Default fallback response
+        return new Response('Offline', { status: 503, statusText: 'Offline' });
       });
     })
   );
@@ -143,11 +196,14 @@ async function handleAPIRequest(request) {
     
     // No cache available
     if (isCriticalEndpoint) {
-      // Return a basic offline response for critical endpoints
+      // Return a detailed offline response for critical endpoints
       return new Response(
         JSON.stringify({ 
           offline: true, 
-          message: 'This data is not available offline. Please check your connection.' 
+          message: 'This data is not available offline. Please check your connection.',
+          data: [], // Provide empty data array for consistency
+          timestamp: Date.now(),
+          endpoint: url.pathname
         }),
         { 
           status: 503,
@@ -168,6 +224,38 @@ self.addEventListener('sync', (event) => {
     event.waitUntil(syncQueuedIncidents());
   }
 });
+
+// Queue an incident for later synchronization
+async function queueIncidentRequest(request) {
+  try {
+    const body = await request.clone().json();
+    const db = await openDB();
+    const tx = db.transaction('incidents', 'readwrite');
+    const store = tx.objectStore('incidents');
+    
+    const incidentToQueue = {
+      data: body,
+      timestamp: Date.now(),
+      synced: false,
+      type: 'incident-report'
+    };
+    
+    await store.add(incidentToQueue);
+    await tx.complete;
+    
+    console.log('[SW] Incident queued for sync:', incidentToQueue.id);
+    
+    // Register background sync if available
+    if ('sync' in self.registration) {
+      await self.registration.sync.register('sync-incidents');
+    }
+    
+    return incidentToQueue;
+  } catch (error) {
+    console.error('[SW] Failed to queue incident request:', error);
+    throw error;
+  }
+}
 
 // Sync queued incidents when back online
 async function syncQueuedIncidents() {
@@ -238,7 +326,11 @@ function openDB() {
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains('incidents')) {
-        db.createObjectStore('incidents', { keyPath: 'id', autoIncrement: true });
+        const store = db.createObjectStore('incidents', { keyPath: 'id', autoIncrement: true });
+        // Add indexes for better query performance
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+        store.createIndex('synced', 'synced', { unique: false });
+        store.createIndex('type', 'type', { unique: false });
       }
     };
   });
